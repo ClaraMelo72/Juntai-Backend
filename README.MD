@@ -2,7 +2,7 @@
 
 **Juntai**, uma solução de matchmaking desenvolvida para conectar startups, investidores anjo e mentores do ecossistema de inovação do Nordeste.
 
-O projeto faz parte do **Projeto Integrador do 5º período de Análise e Desenvolvimento de Sistemas (ADS)**, com foco no ecossistema de startups e economia criativa, tendo como contexto o Porto Digital, no Bairro do Recife.
+O projeto faz parte do Projeto Integrador do 5º período de Análise e Desenvolvimento de Sistemas (ADS), com foco no ecossistema de startups e economia criativa, tendo como contexto o Porto Digital, no Bairro do Recife.
 
 ---
 
