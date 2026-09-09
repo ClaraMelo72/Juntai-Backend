@@ -270,34 +270,6 @@ As alterações estruturais do banco devem ser controladas por meio de migration
 
 ---
 
-## 🔑 Variáveis de ambiente
-
-Informações sensíveis e configurações específicas do ambiente devem ser armazenadas no arquivo `.env`.
-
-Exemplo:
-
-```env
-PORT=3000
-
-DB_HOST=
-DB_PORT=5432
-DB_USERNAME=
-DB_PASSWORD=
-DB_DATABASE=
-
-JWT_SECRET=
-
-CLOUDINARY_CLOUD_NAME=
-CLOUDINARY_API_KEY=
-CLOUDINARY_API_SECRET=
-```
-
-> **Nunca versionar o arquivo `.env` no GitHub.**
-
-O arquivo `.env` deve estar incluído no `.gitignore`.
-
----
-
 ## ⚙️ Instalação
 
 ### Pré-requisitos
