@@ -73,7 +73,7 @@ O backend contempla o desenvolvimento das seguintes funcionalidades:
 
 ## 🏗️ Arquitetura
 
-O backend utiliza uma **arquitetura em camadas (Layered Architecture)**, separando as responsabilidades da aplicação.
+O backend utiliza uma arquitetura em camadas (Layered Architecture), separando as responsabilidades da aplicação.
 
 A comunicação segue, de forma geral, o fluxo:
 
