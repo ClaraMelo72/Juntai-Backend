@@ -1,6 +1,8 @@
 import 'reflect-metadata';
 import express, { Application } from 'express';
 import cors from 'cors';
+import { investidorRoutes } from '@modules/investidores/routes/investidor.routes';  
+import { startupRoutes } from '@modules/startups/routes/startup.routes';             
 
 class App {
   public express: Application;
@@ -20,6 +22,9 @@ class App {
     this.express.get('/', (req, res) => {
       res.send('Juntai-Backend está no ar 🚀');
     });
+
+    this.express.use('/investidores', investidorRoutes);   
+    this.express.use('/startups', startupRoutes);           
   }
 }
 
