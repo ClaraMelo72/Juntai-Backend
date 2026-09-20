@@ -2,6 +2,7 @@ import bcrypt from 'bcrypt';
 import { AppDataSource } from '@shared/database/data-source';
 import { Usuario } from '@modules/usuarios/entities/Usuario';
 import { Investidor } from '@modules/investidores/entities/Investidor';
+import { comUsuarioPublico, UsuarioPublico } from '@modules/usuarios/mappers/usuarioPublico';
 import {
   TipoPerfil,
   TipoInvestidor,
@@ -28,8 +29,10 @@ interface CreateInvestidorDTO {
   modelosInteresse?: ModeloNegocio[];
 }
 
+export type InvestidorResponse = Omit<Investidor, 'usuario'> & { usuario: UsuarioPublico };
+
 export class InvestidorService {
-  async create(data: CreateInvestidorDTO): Promise<Investidor> {
+  async create(data: CreateInvestidorDTO): Promise<InvestidorResponse> {
     const usuarioRepo = AppDataSource.getRepository(Usuario);
 
     const emailExiste = await usuarioRepo.findOne({ where: { email: data.email } });
@@ -63,7 +66,7 @@ export class InvestidorService {
         modelosInteresse: data.modelosInteresse ?? [],
       });
 
-      return manager.save(investidor);
+      return comUsuarioPublico(await manager.save(investidor));
     });
   }
 }

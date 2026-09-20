@@ -2,6 +2,7 @@ import bcrypt from 'bcrypt';
 import { AppDataSource } from '@shared/database/data-source';
 import { Usuario } from '@modules/usuarios/entities/Usuario';
 import { Startup } from '@modules/startups/entities/Startup';
+import { comUsuarioPublico, UsuarioPublico } from '@modules/usuarios/mappers/usuarioPublico';
 import { TipoPerfil, Segmento, Estagio, Regiao, ModeloNegocio } from '@shared/enums';
 
 interface CreateStartupDTO {
@@ -24,8 +25,10 @@ interface CreateStartupDTO {
   canvasJson?: Record<string, unknown>;
 }
 
+export type StartupResponse = Omit<Startup, 'usuario'> & { usuario: UsuarioPublico };
+
 export class StartupService {
-  async create(data: CreateStartupDTO): Promise<Startup> {
+  async create(data: CreateStartupDTO): Promise<StartupResponse> {
     const usuarioRepo = AppDataSource.getRepository(Usuario);
 
     const emailExiste = await usuarioRepo.findOne({ where: { email: data.email } });
@@ -62,7 +65,7 @@ export class StartupService {
         canvasJson: data.canvasJson,
       });
 
-      return manager.save(startup);
+      return comUsuarioPublico(await manager.save(startup));
     });
   }
 }
