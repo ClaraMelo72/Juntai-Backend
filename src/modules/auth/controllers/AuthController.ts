@@ -27,6 +27,14 @@ export class AuthController {
     }
   };
 
+  profile = async (req: Request, res: Response): Promise<Response> => {
+    try {
+      return res.status(200).json(await this.authService.profile(req.user!.id));
+    } catch (error: unknown) {
+      return this.handleError(res, error);
+    }
+  };
+
   private handleError(res: Response, error: unknown): Response {
     if (error instanceof AppError) {
       return res.status(error.statusCode).json({ message: error.message });

@@ -4,6 +4,9 @@ import { authConfig } from '@shared/config/auth';
 import { AppError } from '@shared/errors/AppError';
 import { TipoPerfil } from '@shared/enums';
 import { UsuarioRepository } from '@modules/usuarios/repositories/UsuarioRepository';
+import { AppDataSource } from '@shared/database/data-source';
+import { Startup } from '@modules/startups/entities/Startup';
+import { Investidor } from '@modules/investidores/entities/Investidor';
 
 interface LoginDTO {
   email: string;
@@ -78,5 +81,17 @@ export class AuthService {
       email: usuario.email,
       tipoPerfil: usuario.tipoPerfil,
     };
+  }
+
+  async profile(usuarioId: string): Promise<Startup | Investidor> {
+    const usuario = await this.me(usuarioId);
+    const where = { usuario: { id: usuario.id } };
+    const profile = usuario.tipoPerfil === TipoPerfil.STARTUP
+      ? await AppDataSource.getRepository(Startup).findOne({ where })
+      : usuario.tipoPerfil === TipoPerfil.INVESTIDOR
+        ? await AppDataSource.getRepository(Investidor).findOne({ where })
+        : null;
+    if (!profile) throw new AppError('Perfil nao encontrado.', 404);
+    return profile;
   }
 }
