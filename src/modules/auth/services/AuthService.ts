@@ -1,0 +1,82 @@
+import bcrypt from 'bcrypt';
+import jwt, { SignOptions } from 'jsonwebtoken';
+import { authConfig } from '@shared/config/auth';
+import { AppError } from '@shared/errors/AppError';
+import { TipoPerfil } from '@shared/enums';
+import { UsuarioRepository } from '@modules/usuarios/repositories/UsuarioRepository';
+
+interface LoginDTO {
+  email: string;
+  senha: string;
+}
+
+export interface UsuarioAutenticado {
+  id: string;
+  nome: string;
+  email: string;
+  tipoPerfil: TipoPerfil;
+}
+
+interface LoginResponse {
+  token: string;
+  usuario: UsuarioAutenticado;
+}
+
+// Hash descartável: garante que o bcrypt.compare rode mesmo quando o e-mail não existe,
+// evitando que o tempo de resposta revele quais e-mails estão cadastrados.
+const HASH_DESCARTAVEL = bcrypt.hashSync('senha-descartavel', 10);
+
+export class AuthService {
+  private usuarioRepository: UsuarioRepository;
+
+  constructor() {
+    this.usuarioRepository = new UsuarioRepository();
+  }
+
+  async login({ email, senha }: LoginDTO): Promise<LoginResponse> {
+    if (!email || !senha) {
+      throw new AppError('E-mail e senha são obrigatórios.', 400);
+    }
+
+    const usuario = await this.usuarioRepository.findByEmail(email);
+    const senhaConfere = await bcrypt.compare(senha, usuario?.senhaHash ?? HASH_DESCARTAVEL);
+
+    if (!usuario || !senhaConfere) {
+      throw new AppError('E-mail ou senha inválidos.', 401);
+    }
+
+    if (!usuario.ativo) {
+      throw new AppError('Usuário inativo. Entre em contato com a administração.', 403);
+    }
+
+    const token = jwt.sign({ tipoPerfil: usuario.tipoPerfil }, authConfig.secret, {
+      subject: usuario.id,
+      expiresIn: authConfig.expiresIn as SignOptions['expiresIn'],
+    });
+
+    return {
+      token,
+      usuario: {
+        id: usuario.id,
+        nome: usuario.nome,
+        email: usuario.email,
+        tipoPerfil: usuario.tipoPerfil,
+      },
+    };
+  }
+
+  async me(usuarioId: string): Promise<UsuarioAutenticado> {
+    const usuario = await this.usuarioRepository.findById(usuarioId);
+
+    if (!usuario || !usuario.ativo) {
+      throw new AppError('Usuário não encontrado ou inativo.', 401);
+    }
+
+    return {
+      id: usuario.id,
+      nome: usuario.nome,
+      email: usuario.email,
+      tipoPerfil: usuario.tipoPerfil,
+    };
+  }
+}

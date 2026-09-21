@@ -235,6 +235,58 @@ Os acessos da plataforma são organizados de acordo com o perfil do usuário, in
 
 O backend utiliza middlewares para validar a autenticação e restringir recursos de acordo com as permissões do usuário.
 
+### Endpoints
+
+| Método | Rota | Acesso | Descrição |
+|---|---|---|---|
+| `POST` | `/startups` | Público | Cadastro de startup (cria o usuário com perfil `startup`) |
+| `POST` | `/investidores` | Público | Cadastro de investidor/mentor (perfil `investidor`) |
+| `POST` | `/auth/login` | Público | Recebe `{ "email", "senha" }` e devolve `{ token, usuario }` |
+| `GET` | `/auth/me` | Autenticado | Devolve os dados do usuário do token |
+
+Nas rotas protegidas, envie o token no cabeçalho:
+
+```text
+Authorization: Bearer <token>
+```
+
+Respostas de erro: `401` (token ausente, inválido ou expirado, ou credenciais erradas), `403` (perfil sem permissão ou usuário inativo).
+
+### Protegendo novas rotas
+
+Os middlewares ficam em `src/shared/middlewares`. Use `ensureAuthenticated` para exigir login e `ensureRole` para restringir por perfil:
+
+```ts
+import { ensureAuthenticated } from '@shared/middlewares/ensureAuthenticated';
+import { ensureRole } from '@shared/middlewares/ensureRole';
+import { TipoPerfil } from '@shared/enums';
+
+// Qualquer usuário logado
+router.get('/perfil', ensureAuthenticated, controller.perfil);
+
+// Somente administradores
+router.get('/metricas', ensureAuthenticated, ensureRole(TipoPerfil.ADMIN), controller.metricas);
+
+// Mais de um perfil
+router.get('/matches', ensureAuthenticated, ensureRole(TipoPerfil.STARTUP, TipoPerfil.INVESTIDOR), controller.matches);
+```
+
+Dentro do controller, o usuário logado está em `req.user` (`{ id, tipoPerfil }`).
+
+### Criando o primeiro administrador
+
+O cadastro público só cria startups e investidores. O administrador é criado por script, com o banco no ar:
+
+```bash
+ADMIN_EMAIL=admin@juntai.com ADMIN_PASSWORD=uma-senha-forte npm run seed:admin
+```
+
+No PowerShell:
+
+```powershell
+$env:ADMIN_EMAIL="admin@juntai.com"; $env:ADMIN_PASSWORD="uma-senha-forte"; npm run seed:admin
+```
+
 ---
 
 ## ☁️ Armazenamento de mídia
@@ -301,22 +353,47 @@ npm install
 
 ### Configurar variáveis de ambiente
 
-Criar um arquivo `.env` na raiz do projeto:
+Copiar o arquivo de exemplo para `.env` na raiz do projeto:
 
-```text
-Juntai-Backend/
-├── .env
-├── package.json
-└── src/
+```bash
+cp .env.example .env
 ```
 
-Preencher as variáveis de acordo com o ambiente utilizado.
+No PowerShell, use `Copy-Item .env.example .env`.
+
+Os valores padrão já funcionam com o banco do `docker-compose.yml`. O arquivo `.env` não é versionado.
+
+| Variável | Descrição | Valor padrão |
+|---|---|---|
+| `NODE_ENV` | Ambiente. Fora de `production`, o TypeORM sincroniza o schema e ativa logs | `development` |
+| `PORT` | Porta da API | `3333` |
+| `DB_HOST` | Host do PostgreSQL | `localhost` |
+| `DB_PORT` | Porta do PostgreSQL (o Docker expõe a `5433`) | `5433` |
+| `DB_USER` | Usuário do banco | `admin` |
+| `DB_PASSWORD` | Senha do banco | `admin` |
+| `DB_NAME` | Nome do banco | `juntai_db` |
+| `JWT_SECRET` | Segredo usado para assinar os tokens. **Obrigatório**: a API não sobe sem ele | — |
+| `JWT_EXPIRES_IN` | Validade do token (ex.: `1d`, `12h`) | `1d` |
+
+Cada pessoa deve gerar o próprio `JWT_SECRET`:
+
+```bash
+node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
+```
 
 ---
 
 ## ▶️ Executando em desenvolvimento
 
-Para iniciar o servidor em modo de desenvolvimento:
+Fluxo recomendado: banco no Docker e API rodando localmente.
+
+Subir o PostgreSQL:
+
+```bash
+docker compose up postgres -d
+```
+
+Iniciar o servidor em modo de desenvolvimento:
 
 ```bash
 npm run dev
@@ -325,7 +402,23 @@ npm run dev
 O servidor será executado, por padrão, na porta:
 
 ```text
-3000
+3333
+```
+
+Para parar o banco:
+
+```bash
+docker compose down
+```
+
+Os dados ficam preservados no volume `postgres_data`. Para apagá-los também, use `docker compose down -v`.
+
+### Alternativa: tudo no Docker
+
+Sobe o banco e a API juntos, com hot-reload:
+
+```bash
+docker compose up
 ```
 
 ---
