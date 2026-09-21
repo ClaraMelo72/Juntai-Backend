@@ -7,5 +7,6 @@ const authController = new AuthController();
 
 authRoutes.post('/login', authController.login);
 authRoutes.get('/me', ensureAuthenticated, authController.me);
+authRoutes.get('/profile', ensureAuthenticated, authController.profile);
 
 export { authRoutes };
