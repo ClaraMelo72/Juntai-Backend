@@ -32,6 +32,9 @@ export class Usuario {
   @Column({ type: 'boolean', default: true })
   ativo!: boolean;
 
+  @Column({ name: 'avatar_url', type: 'text', nullable: true })
+  avatarUrl?: string;
+
   @CreateDateColumn({ name: 'criado_em', type: 'timestamptz' })
   criadoEm!: Date;
 
