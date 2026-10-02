@@ -3,7 +3,8 @@ import { AppDataSource } from '@shared/database/data-source';
 import { Usuario } from '@modules/usuarios/entities/Usuario';
 import { Startup } from '@modules/startups/entities/Startup';
 import { comUsuarioPublico, UsuarioPublico } from '@modules/usuarios/mappers/usuarioPublico';
-import { TipoPerfil, Segmento, Estagio, Regiao, ModeloNegocio } from '@shared/enums';
+import { TipoPerfil, Segmento, Estagio, ModeloNegocio } from '@shared/enums';
+import { resolverRegiao } from '@shared/enums/legacyRegiao';
 
 interface CreateStartupDTO {
   nome: string;
@@ -12,7 +13,9 @@ interface CreateStartupDTO {
   nomeFantasia: string;
   segmento: Segmento;
   estagio: Estagio;
-  regiao: Regiao;
+  // Aceita o enum atual de Regiao ou um valor do contrato antigo do frontend
+  // (ver resolverRegiao). Tipado como string pra não restringir ao enum novo aqui.
+  regiao: string;
   modeloNegocio: ModeloNegocio;
   mercadoAlvo?: string;
   numeroClientes?: number;
@@ -36,6 +39,9 @@ export class StartupService {
       throw new Error('E-mail já cadastrado.');
     }
 
+    // Falha cedo (antes de criar usuário/hash de senha) se a região não for reconhecida.
+    const regioesAtuacao = resolverRegiao(data.regiao);
+
     const senhaHash = await bcrypt.hash(data.senha, 10);
 
     return AppDataSource.transaction(async (manager) => {
@@ -52,7 +58,7 @@ export class StartupService {
         nomeFantasia: data.nomeFantasia,
         segmento: data.segmento,
         estagio: data.estagio,
-        regiao: data.regiao,
+        regioesAtuacao,
         modeloNegocio: data.modeloNegocio,
         mercadoAlvo: data.mercadoAlvo,
         numeroClientes: data.numeroClientes,

@@ -9,9 +9,9 @@ import {
   PerfilRisco,
   Segmento,
   Estagio,
-  Regiao,
   ModeloNegocio,
 } from '@shared/enums';
+import { resolverRegioes } from '@shared/enums/legacyRegiao';
 
 interface CreateInvestidorDTO {
   nome: string;
@@ -25,7 +25,9 @@ interface CreateInvestidorDTO {
   bio?: string;
   segmentosInteresse?: Segmento[];
   estagiosInteresse?: Estagio[];
-  regioesInteresse?: Regiao[];
+  // Aceita o enum atual de Regiao ou valores do contrato antigo do frontend
+  // (ver resolverRegioes), incluindo "nacional", que não existe mais como enum único.
+  regioesInteresse?: string[];
   modelosInteresse?: ModeloNegocio[];
 }
 
@@ -39,6 +41,9 @@ export class InvestidorService {
     if (emailExiste) {
       throw new Error('E-mail já cadastrado.');
     }
+
+    // Falha cedo (antes de criar usuário/hash de senha) se alguma região não for reconhecida.
+    const regioesInteresse = resolverRegioes(data.regioesInteresse ?? []);
 
     const senhaHash = await bcrypt.hash(data.senha, 10);
 
@@ -62,7 +67,7 @@ export class InvestidorService {
         bio: data.bio,
         segmentosInteresse: data.segmentosInteresse ?? [],
         estagiosInteresse: data.estagiosInteresse ?? [],
-        regioesInteresse: data.regioesInteresse ?? [],
+        regioesInteresse,
         modelosInteresse: data.modelosInteresse ?? [],
       });
 
