@@ -1,4 +1,5 @@
 import { AppError } from '@shared/errors/AppError';
+import { isUuid } from '@shared/validation/isUuid';
 import { StatusReuniao, TipoPerfil } from '@shared/enums';
 import { UsuarioRepository } from '@modules/usuarios/repositories/UsuarioRepository';
 import { StartupRepository } from '@modules/startups/repositories/StartupRepository';
@@ -58,6 +59,9 @@ export class ReuniaoService {
   ): Promise<ReuniaoResumo> {
     if (!startupId || typeof startupId !== 'string') {
       throw new AppError('Informe a startup.', 400);
+    }
+    if (!isUuid(startupId)) {
+      throw new AppError('Id de startup inválido.', 400);
     }
     if (typeof dataHoraAgendadaIso !== 'string') {
       throw new AppError('Informe a data e hora da reunião (ISO 8601).', 400);
@@ -125,6 +129,9 @@ export class ReuniaoService {
   }
 
   async atualizarStatus(usuarioId: string, reuniaoId: string, novoStatus: unknown): Promise<ReuniaoResumo> {
+    if (!/^\d+$/.test(reuniaoId)) {
+      throw new AppError('Id de reunião inválido.', 400);
+    }
     if (typeof novoStatus !== 'string' || !Object.values(StatusReuniao).includes(novoStatus as StatusReuniao)) {
       throw new AppError('Status inválido.', 400);
     }

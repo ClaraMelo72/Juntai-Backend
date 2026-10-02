@@ -1,4 +1,5 @@
 import { AppError } from '@shared/errors/AppError';
+import { isUuid } from '@shared/validation/isUuid';
 import { TipoPerfil } from '@shared/enums';
 import { Usuario } from '@modules/usuarios/entities/Usuario';
 import { UsuarioRepository } from '@modules/usuarios/repositories/UsuarioRepository';
@@ -40,6 +41,9 @@ export class MensagemService {
   async enviar(remetenteId: string, destinatarioId: unknown, conteudo: unknown): Promise<MensagemResumo> {
     if (!destinatarioId || typeof destinatarioId !== 'string') {
       throw new AppError('Informe o destinatário.', 400);
+    }
+    if (!isUuid(destinatarioId)) {
+      throw new AppError('Id de destinatário inválido.', 400);
     }
     if (remetenteId === destinatarioId) {
       throw new AppError('Não é possível enviar mensagem para si mesmo.', 400);
@@ -86,6 +90,9 @@ export class MensagemService {
   // Sem conversa ainda (nenhum investidor escreveu) devolve lista vazia, não erro:
   // é um estado normal (ex.: abrir o chat com alguém pela primeira vez).
   async listarConversaCom(usuarioId: string, outroUsuarioId: string): Promise<MensagemResumo[]> {
+    if (!isUuid(outroUsuarioId)) {
+      throw new AppError('Id de usuário inválido.', 400);
+    }
     const eu = await this.usuarioRepository.findById(usuarioId);
     if (!eu || !eu.ativo) {
       throw new AppError('Usuário inválido.', 401);
