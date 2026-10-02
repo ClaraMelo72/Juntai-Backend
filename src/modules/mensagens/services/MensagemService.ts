@@ -1,21 +1,43 @@
 import { AppError } from '@shared/errors/AppError';
 import { TipoPerfil } from '@shared/enums';
+import { Usuario } from '@modules/usuarios/entities/Usuario';
 import { UsuarioRepository } from '@modules/usuarios/repositories/UsuarioRepository';
-import {
-  MensagemRepository,
-  ConversaResumo,
-  MensagemRegistro,
-} from '@modules/mensagens/repositories/MensagemRepository';
+import { StartupRepository } from '@modules/startups/repositories/StartupRepository';
+import { InvestidorRepository } from '@modules/investidores/repositories/InvestidorRepository';
+import { ConversaRepository, ConversaResumo } from '@modules/conversas/repositories/ConversaRepository';
+import { MensagemRepository, MensagemRegistro } from '@modules/mensagens/repositories/MensagemRepository';
 
 export type MensagemResumo = MensagemRegistro;
 
 export class MensagemService {
   usuarioRepository = new UsuarioRepository();
+  startupRepository = new StartupRepository();
+  investidorRepository = new InvestidorRepository();
+  conversaRepository = new ConversaRepository();
   mensagemRepository = new MensagemRepository();
 
-  // Regra de negócio: só investidor pode iniciar uma conversa. A startup só responde
-  // depois que um investidor já escreveu para ela antes.
-  async enviar(remetenteId: string, destinatarioId: string, conteudo: unknown): Promise<MensagemResumo> {
+  // Dado o par de usuários (um precisa ser startup, o outro investidor), acha os ids de
+  // perfil (Startup.id / Investidor.id) usados pela Conversa. Lança 403 se os dois forem
+  // do mesmo tipo (startup-startup, investidor-investidor) ou se algum for admin.
+  private async resolverPar(usuarioA: Usuario, usuarioB: Usuario): Promise<{ startupId: string; investidorId: string }> {
+    const [startupUsuario, investidorUsuario] =
+      usuarioA.tipoPerfil === TipoPerfil.STARTUP ? [usuarioA, usuarioB] : [usuarioB, usuarioA];
+    if (startupUsuario.tipoPerfil !== TipoPerfil.STARTUP || investidorUsuario.tipoPerfil !== TipoPerfil.INVESTIDOR) {
+      throw new AppError('Mensagens só podem ser trocadas entre uma startup e um investidor.', 403);
+    }
+
+    const startup = await this.startupRepository.findByUsuarioId(startupUsuario.id);
+    const investidor = await this.investidorRepository.findByUsuarioId(investidorUsuario.id);
+    if (!startup || !investidor) {
+      throw new AppError('Perfil não encontrado.', 404);
+    }
+    return { startupId: startup.id, investidorId: investidor.id };
+  }
+
+  // Regra de negócio: só investidor pode iniciar uma conversa (criar a Conversa). A startup
+  // só consegue responder depois que já existe uma conversa, ou seja, depois que um
+  // investidor escreveu primeiro.
+  async enviar(remetenteId: string, destinatarioId: unknown, conteudo: unknown): Promise<MensagemResumo> {
     if (!destinatarioId || typeof destinatarioId !== 'string') {
       throw new AppError('Informe o destinatário.', 400);
     }
@@ -34,41 +56,52 @@ export class MensagemService {
     if (!remetente || !remetente.ativo) {
       throw new AppError('Usuário remetente inválido.', 401);
     }
-
+    if (remetente.tipoPerfil !== TipoPerfil.STARTUP && remetente.tipoPerfil !== TipoPerfil.INVESTIDOR) {
+      throw new AppError('Este perfil não participa de conversas.', 403);
+    }
     const destinatario = await this.usuarioRepository.findById(destinatarioId);
     if (!destinatario || !destinatario.ativo) {
       throw new AppError('Destinatário não encontrado.', 404);
     }
 
-    if (remetente.tipoPerfil === TipoPerfil.INVESTIDOR) {
-      if (destinatario.tipoPerfil !== TipoPerfil.STARTUP) {
-        throw new AppError('Investidores só podem enviar mensagem para startups.', 403);
-      }
-    } else if (remetente.tipoPerfil === TipoPerfil.STARTUP) {
-      if (destinatario.tipoPerfil !== TipoPerfil.INVESTIDOR) {
-        throw new AppError('Startups só podem responder a investidores.', 403);
-      }
-      const conversaIniciada = await this.mensagemRepository.existeMensagemDe(destinatarioId, remetenteId);
-      if (!conversaIniciada) {
+    const { startupId, investidorId } = await this.resolverPar(remetente, destinatario);
+
+    let conversa = await this.conversaRepository.buscarPorPar(startupId, investidorId);
+    if (!conversa) {
+      if (remetente.tipoPerfil !== TipoPerfil.INVESTIDOR) {
         throw new AppError('Aguarde um investidor iniciar a conversa antes de enviar uma mensagem.', 403);
       }
-    } else {
-      throw new AppError('Este perfil não participa de conversas.', 403);
+      conversa = await this.conversaRepository.criar(startupId, investidorId);
     }
 
-    return this.mensagemRepository.criar(remetenteId, destinatarioId, texto);
+    const mensagem = await this.mensagemRepository.criar(conversa.id, remetenteId, texto);
+    await this.conversaRepository.tocarUltimaMensagem(conversa.id, mensagem.enviadoEm);
+    return mensagem;
   }
 
   async listarConversas(usuarioId: string): Promise<ConversaResumo[]> {
-    return this.mensagemRepository.listarConversas(usuarioId);
+    return this.conversaRepository.listarResumoPorUsuario(usuarioId);
   }
 
-  async listarConversaCom(usuarioId: string, outroId: string): Promise<MensagemResumo[]> {
-    const outro = await this.usuarioRepository.findById(outroId);
+  // Sem conversa ainda (nenhum investidor escreveu) devolve lista vazia, não erro:
+  // é um estado normal (ex.: abrir o chat com alguém pela primeira vez).
+  async listarConversaCom(usuarioId: string, outroUsuarioId: string): Promise<MensagemResumo[]> {
+    const eu = await this.usuarioRepository.findById(usuarioId);
+    if (!eu || !eu.ativo) {
+      throw new AppError('Usuário inválido.', 401);
+    }
+    const outro = await this.usuarioRepository.findById(outroUsuarioId);
     if (!outro) {
       throw new AppError('Usuário não encontrado.', 404);
     }
-    await this.mensagemRepository.marcarComoLidas(usuarioId, outroId);
-    return this.mensagemRepository.listarConversa(usuarioId, outroId);
+
+    const { startupId, investidorId } = await this.resolverPar(eu, outro);
+    const conversa = await this.conversaRepository.buscarPorPar(startupId, investidorId);
+    if (!conversa) {
+      return [];
+    }
+
+    await this.mensagemRepository.marcarComoLidas(conversa.id, usuarioId);
+    return this.mensagemRepository.listarPorConversa(conversa.id);
   }
 }
