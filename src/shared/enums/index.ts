@@ -44,10 +44,11 @@ export enum Estagio {
 }
 
 export enum Regiao {
-  RECIFE = 'recife',
-  PORTO_DIGITAL = 'porto_digital',
+  NORTE = 'norte',
   NORDESTE = 'nordeste',
-  NACIONAL = 'nacional',
+  CENTRO_OESTE = 'centro_oeste',
+  SUDESTE = 'sudeste',
+  SUL = 'sul',
 }
 
 export enum ModeloNegocio {
@@ -83,4 +84,45 @@ export enum AcaoAuditoria {
   REMOCAO_CONTEUDO = 'remocao_conteudo',
   EDICAO_CONTEUDO = 'edicao_conteudo',
   REATIVACAO_USUARIO = 'reativacao_usuario',
+}
+
+// ---- Novos enums do mapeamento de campos do front-end ----
+
+export enum MetricaCrescimento {
+  RECEITA = 'receita',
+  CLIENTES = 'clientes',
+  CLIENTES_E_RECEITA = 'clientes_e_receita',
+}
+
+export enum PeriodoComparacao {
+  ULTIMOS_3_MESES = 'ultimos_3_meses',
+  ULTIMOS_6_MESES = 'ultimos_6_meses',
+  ULTIMO_ANO = 'ultimo_ano',
+  DESDE_FUNDACAO = 'desde_fundacao',
+}
+
+export enum NecessidadeAdicional {
+  MENTORIA = 'mentoria',
+  CONEXOES_MERCADO = 'conexoes_mercado',
+  CONTRATACAO_TALENTOS = 'contratacao_talentos',
+  PARCERIAS_ESTRATEGICAS = 'parcerias_estrategicas',
+  OUTRO = 'outro',
+}
+
+export enum AreaAjuda {
+  MENTORIA = 'mentoria',
+  NETWORKING = 'networking',
+  OPERACOES = 'operacoes',
+  VENDAS_MARKETING = 'vendas_marketing',
+  GROWTH = 'growth',
+  FINANCEIRO_JURIDICO = 'financeiro_juridico',
+  PRODUTO_TECNOLOGIA = 'produto_tecnologia',
+  RH_PESSOAS = 'rh_pessoas',
+}
+
+export enum DisponibilidadeInvestidor {
+  ALGUMAS_HORAS_MES = 'algumas_horas_mes',
+  ALGUMAS_HORAS_SEMANA = 'algumas_horas_semana',
+  MEIO_PERIODO = 'meio_periodo',
+  DEDICACAO_INTEGRAL = 'dedicacao_integral',
 }
