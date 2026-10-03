@@ -11,22 +11,48 @@ import {
   Estagio,
   Regiao,
   ModeloNegocio,
+  AreaAjuda,
+  DisponibilidadeInvestidor,
 } from '@shared/enums';
 
 interface CreateInvestidorDTO {
+  // dados da conta (Usuario)
   nome: string;
   email: string;
   senha: string;
+  avatarUrl?: string;
+
+  // identidade / apresentação
+  tituloProfissional?: string;
+  linkedinUrl?: string;
+  bio?: string;
+
+  // localização
+  estado?: string;
+  cidade?: string;
+
+  // perfil de atuação
   tipoInvestidor: TipoInvestidor;
+  areasAjuda?: AreaAjuda[];
+  disponibilidade?: DisponibilidadeInvestidor;
+
+  // experiência prévia
+  jaAtuouComStartups?: boolean;
+  numeroAproximadoInvestimentos?: number;
+  descricaoExperiencia?: string;
+  setoresAtuacao?: Segmento[];
+  anosExperiencia?: number;
+
+  // critérios de investimento
   ticketMinimo?: number;
   ticketMaximo?: number;
   perfilRisco?: PerfilRisco;
-  anosExperiencia?: number;
-  bio?: string;
   segmentosInteresse?: Segmento[];
   estagiosInteresse?: Estagio[];
   regioesInteresse?: Regiao[];
   modelosInteresse?: ModeloNegocio[];
+  // status_moderacao NÃO entra aqui de propósito: todo investidor nasce "pendente",
+  // quem muda isso é o fluxo de aprovação do admin (RF08), nunca o próprio cadastro.
 }
 
 export type InvestidorResponse = Omit<Investidor, 'usuario'> & { usuario: UsuarioPublico };
@@ -48,18 +74,34 @@ export class InvestidorService {
         email: data.email,
         senhaHash,
         tipoPerfil: TipoPerfil.INVESTIDOR,
+        avatarUrl: data.avatarUrl,
       });
       const usuarioSalvo = await manager.save(usuario);
 
       const investidor = manager.create(Investidor, {
         usuario: usuarioSalvo,
         nome: data.nome,
+
+        tituloProfissional: data.tituloProfissional,
+        linkedinUrl: data.linkedinUrl,
+        bio: data.bio,
+
+        estado: data.estado,
+        cidade: data.cidade,
+
         tipoInvestidor: data.tipoInvestidor,
+        areasAjuda: data.areasAjuda ?? [],
+        disponibilidade: data.disponibilidade,
+
+        jaAtuouComStartups: data.jaAtuouComStartups ?? false,
+        numeroAproximadoInvestimentos: data.numeroAproximadoInvestimentos,
+        descricaoExperiencia: data.descricaoExperiencia,
+        setoresAtuacao: data.setoresAtuacao ?? [],
+        anosExperiencia: data.anosExperiencia,
+
         ticketMinimo: data.ticketMinimo,
         ticketMaximo: data.ticketMaximo,
         perfilRisco: data.perfilRisco,
-        anosExperiencia: data.anosExperiencia,
-        bio: data.bio,
         segmentosInteresse: data.segmentosInteresse ?? [],
         estagiosInteresse: data.estagiosInteresse ?? [],
         regioesInteresse: data.regioesInteresse ?? [],
