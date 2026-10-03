@@ -18,6 +18,14 @@ export class AuthController {
     }
   };
 
+  forgotPassword = async (req: Request, res: Response): Promise<Response> => {
+    try {
+      return res.status(200).json(await this.authService.checkRecoveryEmail(req.body?.email));
+    } catch (error: unknown) {
+      return this.handleError(res, error);
+    }
+  };
+
   me = async (req: Request, res: Response): Promise<Response> => {
     try {
       const usuario = await this.authService.me(req.user!.id);
