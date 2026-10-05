@@ -42,7 +42,7 @@ async function main() {
       nomeFantasia: 'FinTechPE',
       segmento: Segmento.FINTECH,
       estagio: Estagio.TRACAO,
-      regiao: Regiao.RECIFE,
+      regioesAtuacao: [Regiao.NORDESTE],
       modeloNegocio: ModeloNegocio.B2B,
       capitalProcurado: 800000,
     }),
