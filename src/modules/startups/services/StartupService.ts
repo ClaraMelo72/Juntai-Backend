@@ -196,7 +196,7 @@ export class StartupService {
   // Lista e detalhe nunca carregam o Usuario (ver StartupRepository), então o retorno
   // não tem o campo "usuario" nem chance de vazar senha_hash.
   async listar(): Promise<Startup[]> {
-    return this.startupRepository.listarTodas();
+    return this.startupRepository.listarAprovadas();
   }
 
   async buscarPorId(id: string): Promise<Startup> {

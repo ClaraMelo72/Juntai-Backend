@@ -1,3 +1,4 @@
+import { adminRoutes } from '@modules/admin/routes/admin.routes';
 import 'reflect-metadata';
 import express, { Application } from 'express';
 import cors from 'cors';
@@ -29,6 +30,7 @@ class App {
 
     this.express.use('/uploads', uploadRoutes);
     this.express.use('/auth', authRoutes);
+    this.express.use('/admin', adminRoutes);
     this.express.use('/investidores', investidorRoutes);
     this.express.use('/startups', startupRoutes);
     this.express.use('/mensagens', mensagemRoutes);
