@@ -5,6 +5,8 @@ import { investidorRoutes } from '@modules/investidores/routes/investidor.routes
 import { startupRoutes } from '@modules/startups/routes/startup.routes';
 import { uploadRoutes } from '@modules/uploads/routes/upload.routes';
 import { authRoutes } from '@modules/auth/routes/auth.routes';
+import { mensagemRoutes } from '@modules/mensagens/routes/mensagem.routes';
+import { reuniaoRoutes } from '@modules/reunioes/routes/reuniao.routes';
 
 class App {
   public express: Application;
@@ -28,7 +30,9 @@ class App {
     this.express.use('/uploads', uploadRoutes);
     this.express.use('/auth', authRoutes);
     this.express.use('/investidores', investidorRoutes);
-    this.express.use('/startups', startupRoutes);           
+    this.express.use('/startups', startupRoutes);
+    this.express.use('/mensagens', mensagemRoutes);
+    this.express.use('/reunioes', reuniaoRoutes);
   }
 }
 
