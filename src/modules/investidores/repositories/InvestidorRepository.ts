@@ -3,10 +3,10 @@ import { AppDataSource } from '@shared/database/data-source';
 import { Investidor } from '@modules/investidores/entities/Investidor';
 
 export class InvestidorRepository {
-  private repository: Repository<Investidor>;
-
-  constructor() {
-    this.repository = AppDataSource.getRepository(Investidor);
+  // Resolvido a cada uso: os controllers são instanciados na importação das rotas,
+  // antes de o AppDataSource ser inicializado no Server.ts.
+  private get repository(): Repository<Investidor> {
+    return AppDataSource.getRepository(Investidor);
   }
 
   async create(data: Partial<Investidor>): Promise<Investidor> {
@@ -14,7 +14,20 @@ export class InvestidorRepository {
     return this.repository.save(investidor);
   }
 
+  async findById(id: string): Promise<Investidor | null> {
+    return this.repository.findOne({ where: { id } });
+  }
+
   async findByUsuarioId(usuarioId: string): Promise<Investidor | null> {
     return this.repository.findOne({ where: { usuario: { id: usuarioId } } });
+  }
+
+  // Sem relations: nunca carrega o Usuario (e o senha_hash) nessas duas, só os dados do investidor.
+  async listarTodas(): Promise<Investidor[]> {
+    return this.repository.find({ order: { criadoEm: 'DESC' } });
+  }
+
+  async salvar(investidor: Investidor): Promise<Investidor> {
+    return this.repository.save(investidor);
   }
 }
