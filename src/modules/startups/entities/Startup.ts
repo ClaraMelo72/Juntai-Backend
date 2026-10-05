@@ -35,6 +35,9 @@ export class Startup {
   @Column({ name: 'logo_url', type: 'text', nullable: true })
   logoUrl?: string;
 
+  @Column({ name: 'apresentacao_url', type: 'text', nullable: true })
+  apresentacaoUrl?: string;
+
   @Column({ name: 'descricao_curta', type: 'varchar', length: 300, nullable: true })
   descricaoCurta?: string;
 

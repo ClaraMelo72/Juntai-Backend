@@ -3,6 +3,7 @@ import express, { Application } from 'express';
 import cors from 'cors';
 import { investidorRoutes } from '@modules/investidores/routes/investidor.routes';  
 import { startupRoutes } from '@modules/startups/routes/startup.routes';
+import { uploadRoutes } from '@modules/uploads/routes/upload.routes';
 import { authRoutes } from '@modules/auth/routes/auth.routes';
 
 class App {
@@ -24,6 +25,7 @@ class App {
       res.send('Juntai-Backend está no ar 🚀');
     });
 
+    this.express.use('/uploads', uploadRoutes);
     this.express.use('/auth', authRoutes);
     this.express.use('/investidores', investidorRoutes);
     this.express.use('/startups', startupRoutes);           
