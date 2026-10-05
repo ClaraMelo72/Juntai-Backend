@@ -6,6 +6,7 @@ const authRoutes = Router();
 const authController = new AuthController();
 
 authRoutes.post('/login', authController.login);
+authRoutes.post('/forgot-password', authController.forgotPassword);
 authRoutes.get('/me', ensureAuthenticated, authController.me);
 authRoutes.get('/profile', ensureAuthenticated, authController.profile);
 

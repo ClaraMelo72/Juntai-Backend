@@ -78,3 +78,12 @@ test('investidor: dono consegue editar e statusModeracao continua ignorado', asy
   assert.equal(atualizado.bio, 'nova');
   assert.equal(atualizado.statusModeracao, 'pendente');
 });
+
+test('listagem de descoberta usa somente a consulta de startups aprovadas', async (t) => {
+  const service = new StartupService();
+  const approved = [{ id: STARTUP_1, statusModeracao: 'aprovado' }];
+  const spy=t.mock.method(service.startupRepository,'listarAprovadas',async()=>approved);
+  t.mock.method(service.startupRepository,'listarTodas',async()=>{throw Error('Consulta sem filtro não deve ser utilizada');});
+  assert.deepEqual(await service.listar(),approved);
+  assert.equal(spy.mock.callCount(),1);
+});

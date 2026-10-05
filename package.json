@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only -r tsconfig-paths/register src/Server.ts",
     "build": "tsc",
+    "test:uploads": "node tests/uploads.cjs",
     "start": "node dist/Server.js",
     "seed:admin": "ts-node-dev --transpile-only -r tsconfig-paths/register src/shared/database/seed-admin.ts",
     "test": "node --test tests/*.test.cjs"

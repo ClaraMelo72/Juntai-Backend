@@ -68,6 +68,18 @@ export class AuthService {
     };
   }
 
+  // Fluxo temporário: consulta o cadastro, sem gerar código ou alterar a senha.
+  async checkRecoveryEmail(value: unknown): Promise<{ emailFound: true; codeSent: false }> {
+    if (typeof value !== 'string' || value.trim().length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())) {
+      throw new AppError('Informe um e-mail válido.', 400);
+    }
+    const usuario = await this.usuarioRepository.findByEmail(value.trim().toLowerCase());
+    if (!usuario) {
+      throw new AppError('O e-mail digitado não está na nossa base de dados.', 404);
+    }
+    return { emailFound: true, codeSent: false };
+  }
+
   async me(usuarioId: string): Promise<UsuarioAutenticado> {
     const usuario = await this.usuarioRepository.findById(usuarioId);
 
