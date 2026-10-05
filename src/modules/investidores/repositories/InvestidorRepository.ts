@@ -21,4 +21,13 @@ export class InvestidorRepository {
   async findByUsuarioId(usuarioId: string): Promise<Investidor | null> {
     return this.repository.findOne({ where: { usuario: { id: usuarioId } } });
   }
+
+  // Sem relations: nunca carrega o Usuario (e o senha_hash) nessas duas, só os dados do investidor.
+  async listarTodas(): Promise<Investidor[]> {
+    return this.repository.find({ order: { criadoEm: 'DESC' } });
+  }
+
+  async salvar(investidor: Investidor): Promise<Investidor> {
+    return this.repository.save(investidor);
+  }
 }
