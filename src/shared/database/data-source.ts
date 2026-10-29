@@ -16,9 +16,8 @@ export const AppDataSource = new DataSource({
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
 
-  // NUNCA true em produção: deixa o TypeORM alterar o schema sozinho.
-  // Enquanto ainda não tem migrations, pode deixar true só em desenvolvimento.
-  synchronize: process.env.NODE_ENV !== 'production',
+  // Alterações de schema exclusivamente por migrations explicitamente autorizadas.
+  synchronize: false,
   logging: process.env.NODE_ENV !== 'production',
 
   entities: [entitiesGlob],
