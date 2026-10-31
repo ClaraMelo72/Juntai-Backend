@@ -8,9 +8,11 @@ import { createHash } from 'crypto';
 import { MatchmakingClient } from './MatchmakingClient';
 import { Context, issueContext, readContext } from './ExposureContext';
 import { investorFeatures, startupFeatures, project, rulesProfile, Profile } from './contracts';
+import { SupervisedContractError, supervisedInvestorFeatures, supervisedStartupFeatures, supervisedProfile } from './supervisedContracts';
 
-export function profileRevision(profile: Profile, investor: boolean): string {
-  return createHash('sha256').update(JSON.stringify({ updated: profile.atualizadoEm.toISOString(), features: project(profile, investor ? investorFeatures : startupFeatures) })).digest('hex');
+export function profileRevision(profile: Profile, investor: boolean, supervised = false): string {
+  const keys = supervised ? (investor ? supervisedInvestorFeatures : supervisedStartupFeatures) : (investor ? investorFeatures : startupFeatures);
+  return createHash('sha256').update(JSON.stringify({ updated: profile.atualizadoEm.toISOString(), features: project(profile, keys) })).digest('hex');
 }
 
 export class MatchmakingService {
@@ -24,7 +26,7 @@ export class MatchmakingService {
     return investor;
   }
   private context(i: Investidor, s: Startup, origin: Context['origin'], position: number | null, version: string | null) {
-    return issueContext({ investorId: i.id, startupId: s.id, investorRevision: profileRevision(i, true), startupRevision: profileRevision(s, false), origin, position, version });
+    return issueContext({ investorId: i.id, startupId: s.id, investorRevision: profileRevision(i, true, origin === 'supervised'), startupRevision: profileRevision(s, false, origin === 'supervised'), origin, position, version });
   }
   async recommend(userId: string, limit: number) {
     const investor = await this.actor(userId);
@@ -33,6 +35,41 @@ export class MatchmakingService {
     return this.rankCandidates(investor, startups, limit);
   }
   private async rankCandidates(investor: Investidor, startups: Startup[], limit: number) {
+    const strategy = process.env.MATCHMAKING_STRATEGY || 'rules';
+    if (!['rules','supervised'].includes(strategy)) throw new AppError('Estratégia de recomendação inválida.', 500);
+    if (strategy === 'rules') return this.rankRules(investor, startups, limit);
+    try { return await this.rankSupervised(investor, startups, limit); }
+    catch (error) {
+      if (!(error instanceof AppError) || ![503,504].includes(error.statusCode)) {
+        console.error({ event: 'matchmaking_supervised_contract_error', status: error instanceof AppError ? error.statusCode : 500 });
+        throw error;
+      }
+      const motivo = error.statusCode === 504 ? 'timeout' : 'indisponibilidade';
+      console.warn({ event: 'matchmaking_supervised_fallback', motivo, status: error.statusCode });
+      return { ...await this.rankRules(investor, startups, limit), fallback: { de: 'supervised', motivo }, avisos: ['Nível 2 indisponível; recomendações calculadas pelo Nível 1A.'] };
+    }
+  }
+  private async rankSupervised(investor: Investidor, startups: Startup[], limit: number) {
+    const candidates = startups.filter(s => s.statusModeracao === 'aprovado' && s.usuario?.ativo === true && s.usuario.id !== s.id && (!s.usuario.tipoPerfil || s.usuario.tipoPerfil === 'startup'));
+    const recommendations: Profile[] = [];
+    let identity: Profile | null = null;
+    const notices = new Set<string>();
+    for (let offset = 0; offset < candidates.length; offset += 10000) {
+      const result = await this.client.supervised({ investidor: supervisedProfile(investor, true), startups: candidates.slice(offset, offset + 10000).map(s => supervisedProfile(s, false)), limite: limit });
+      const current = Object.fromEntries(['modelo','versaoModelo','versaoContrato','versaoFeatures','versaoTarget'].map(k => [k, result[k]]));
+      if (identity && JSON.stringify(identity) !== JSON.stringify(current)) throw new SupervisedContractError();
+      identity = current;
+      result.avisos.forEach((s: string) => notices.add(s));
+      recommendations.push(...result.recomendacoes);
+    }
+    recommendations.sort((a,b) => b.probabilidadeInteresse - a.probabilidadeInteresse || (a.startupId < b.startupId ? -1 : a.startupId > b.startupId ? 1 : 0));
+    const byId = new Map(candidates.map(s => [s.id,s]));
+    return { investidorId: investor.id, versaoAlgoritmo: identity?.versaoModelo ?? null, ...identity,
+      origemRecomendacao: 'supervised', experimental: true, avisos: [...notices],
+      recomendacoes: recommendations.slice(0,limit).map((r,index): Profile => ({ ...r, posicao: index+1, posicaoRanking: index+1,
+        origemRecomendacao: 'supervised', contextoExposicao: this.context(investor,byId.get(r.startupId)!,'supervised',index+1,identity!.versaoModelo) })) };
+  }
+  private async rankRules(investor: Investidor, startups: Startup[], limit: number) {
     // /match/rules aceita até 10.000 candidatas. Top L de cada lote basta para o top L global.
     const recommendations: Profile[] = [];
     let version: string | null = null;
@@ -45,7 +82,7 @@ export class MatchmakingService {
     }
     recommendations.sort((a, b) => Number(a.scoreRanking === null) - Number(b.scoreRanking === null) || (b.scoreRanking ?? 0) - (a.scoreRanking ?? 0) || b.cobertura - a.cobertura || (a.startupId < b.startupId ? -1 : a.startupId > b.startupId ? 1 : 0));
     const byId = new Map(startups.map(s => [s.id, s]));
-    return { investidorId: investor.id, versaoAlgoritmo: version, recomendacoes: recommendations.slice(0, limit).map((r, index): Profile => ({ ...r, posicao: index + 1, contextoExposicao: this.context(investor, byId.get(r.startupId)!, 'rules', index + 1, version) })) };
+    return { investidorId: investor.id, versaoAlgoritmo: version, origemRecomendacao: 'rules', recomendacoes: recommendations.slice(0, limit).map((r, index): Profile => ({ ...r, posicao: index + 1, posicaoRanking: index + 1, origemRecomendacao: 'rules', contextoExposicao: this.context(investor, byId.get(r.startupId)!, 'rules', index + 1, version) })) };
   }
   async discovery(userId: string, params: Record<string, string>) {
     const investor = await this.actor(userId);
@@ -79,9 +116,12 @@ export class MatchmakingService {
       const ranked = all.recomendacoes.filter(r => permitted.has(r.startupId));
       items = ranked.slice(page * size, (page + 1) * size).map(r => {
         const { usuario, ...publicStartup } = permitted.get(r.startupId)!;
-        return { ...publicStartup, compatibility: r.score === null ? undefined : r.score * 100, contextoExposicao: r.contextoExposicao };
+        return { ...publicStartup, compatibility: r.origemRecomendacao === 'rules' && r.score != null ? r.score * 100 : undefined,
+          probabilidadeInteresse: r.probabilidadeInteresse, posicaoRanking: r.posicaoRanking, origemRecomendacao: r.origemRecomendacao,
+          versaoModelo: r.versaoModelo, avisos: r.avisos, contextoExposicao: r.contextoExposicao };
       });
-      return { items, total: ranked.length, hasMore: (page + 1) * size < ranked.length, facets: await this.facets(query) };
+      return { items, total: ranked.length, hasMore: (page + 1) * size < ranked.length, facets: await this.facets(query),
+        origemRecomendacao: all.origemRecomendacao, ...('fallback' in all ? { fallback: all.fallback } : {}), ...('avisos' in all ? { avisos: all.avisos } : {}) };
     }
     const order = params.sort === 'name' ? 's.nomeFantasia' : params.sort === 'investment' ? 's.buscaInvestimento' : 's.criadoEm';
     const found = await query.orderBy(order, params.sort === 'name' ? 'ASC' : 'DESC').addOrderBy('s.id', 'ASC').skip(page * size).take(size).getMany();
@@ -92,7 +132,8 @@ export class MatchmakingService {
     return { items, total, hasMore: (page + 1) * size < total, facets: await this.facets(query) };
   }
   private async facets(query: any) {
-    const rows = await query.clone().select('s.estado', 'estado').addSelect('s.segmento', 'segmento').addSelect('s.regioes_atuacao', 'regioes').distinct(true).getRawMany();
+    // Facetas preservam os filtros, mas não precisam da ordenação da listagem.
+    const rows = await query.clone().orderBy().select('s.estado', 'estado').addSelect('s.segmento', 'segmento').addSelect('s.regioes_atuacao', 'regioes').distinct(true).getRawMany();
     return { locations: [...new Set(rows.map((r: any) => r.estado).filter(Boolean))].sort(), segments: new Set(rows.map((r: any) => r.segmento)).size, regions: new Set(rows.flatMap((r: any) => r.regioes || [])).size };
   }
   async confirmExposure(userId: string, token: unknown) {
@@ -105,8 +146,10 @@ export class MatchmakingService {
       if (existing) return existing;
       const startup = await manager.getRepository(Startup).createQueryBuilder('s').innerJoinAndSelect('s.usuario', 'u').where('s.id = :id', { id: context.startupId }).setLock('pessimistic_read').getOne();
       if (!startup || !startup.usuario.ativo || startup.statusModeracao !== 'aprovado') throw new AppError('Startup indisponível.', 404);
-      if (profileRevision(investor, true) !== context.investorRevision || profileRevision(startup, false) !== context.startupRevision) throw new AppError('Perfis alterados. Atualize a descoberta.', 409);
-      const snapshot = { investidor: project(investor, investorFeatures), startup: project(startup, startupFeatures) };
+      const supervised = context.origin === 'supervised';
+      if (supervised && startup.usuario.tipoPerfil !== 'startup') throw new AppError('Startup indisponível.', 404);
+      if (profileRevision(investor, true, supervised) !== context.investorRevision || profileRevision(startup, false, supervised) !== context.startupRevision) throw new AppError('Perfis alterados. Atualize a descoberta.', 409);
+      const snapshot = { investidor: project(investor, supervised ? supervisedInvestorFeatures : investorFeatures), startup: project(startup, supervised ? supervisedStartupFeatures : startupFeatures) };
       const [saved] = await manager.query(`INSERT INTO exposicoes_startups (id,investidor_id,startup_id,origem_recomendacao,posicao_ranking,versao_recomendador,snapshot_perfis)
         VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb) ON CONFLICT (id) DO NOTHING RETURNING id,ocorrido_em`,
         [context.exposureId, investor.id, startup.id, context.origin, context.position, context.version, JSON.stringify(snapshot)]);
