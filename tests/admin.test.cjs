@@ -49,6 +49,8 @@ test(
             email: ids[n] + "@admin-test.invalid",
             senhaHash: "not-a-valid-password-hash",
             tipoPerfil: n === 0 ? "admin" : n === 1 ? "startup" : "investidor",
+            avatarUrl:
+              n === 2 ? "https://example.com/investor-fixture.png" : undefined,
             ativo: true,
           }),
         );
@@ -200,6 +202,14 @@ test(
       assert.equal(inbox.data[0].usuarioId, ids[2]);
       assert.equal(inbox.data[0].naoLidas, 1);
       assert.equal(
+        inbox.data[0].avatarUrl,
+        "https://example.com/investor-fixture.png",
+      );
+      assert.equal(inbox.data[0].logoUrl, null);
+      const investorInbox = await api("/mensagens/conversas", 2, "investidor");
+      assert.equal(investorInbox.data[0].logoUrl, sample.logoUrl ?? null);
+      assert.equal(investorInbox.data[0].avatarUrl, null);
+      assert.equal(
         (await api("/mensagens/" + ids[2], 1, "startup")).data.length,
         1,
       );
@@ -230,6 +240,27 @@ test(
       const metric = await request("metricas");
       assert.equal(metric.status, 200);
       assert.equal(typeof metric.data.usuarios, "number");
+      const [expectedMetrics] = await db.query(`SELECT
+        (SELECT count(*)::int FROM (SELECT DISTINCT investidor_id,startup_id
+          FROM funil_interacoes WHERE tipo_evento='interesse_demonstrado') pairs) AS matches,
+        (SELECT count(*)::int FROM conversas c WHERE EXISTS
+          (SELECT 1 FROM mensagens m WHERE m.conversa_id=c.id)) AS conversas,
+        (SELECT count(*)::int FROM reunioes) AS reunioes`);
+      for (const key of ['matches', 'conversas', 'reunioes']) {
+        assert.equal(typeof metric.data[key], 'number');
+        assert.equal(metric.data[key], expectedMetrics[key]);
+        assert.ok(metric.data[key] >= 1);
+      }
+      // Repeated interest events must not count the same pair twice.
+      await db.query(`INSERT INTO funil_interacoes (startup_id,investidor_id,tipo_evento)
+        VALUES ($1,$2,'interesse_demonstrado')`, [fixtureId, investor.id]);
+      const duplicateMetric = await request('metricas');
+      assert.equal(duplicateMetric.data.matches, metric.data.matches);
+      // Final states remain part of the total of meetings created.
+      await db.getRepository(Reuniao).update(meeting.id, { status: 'cancelada' });
+      assert.equal((await request('metricas')).data.reunioes, metric.data.reunioes);
+      await db.getRepository(Reuniao).update(meeting.id, { status: 'agendada' });
+
       const list = await request("cadastros?q=Fixture");
       assert.equal(list.status, 200);
       assert.ok(list.data.items.some((row) => row.id === fixtureId));
@@ -362,7 +393,10 @@ test(
         await db.query("DELETE FROM log_auditoria WHERE admin_usuario_id=$1", [
           ids[0],
         ]);
-        await db.query("DELETE FROM mensagens WHERE remetente_usuario_id = ANY($1::uuid[])", [ids]);
+        await db.query(
+          "DELETE FROM mensagens WHERE remetente_usuario_id = ANY($1::uuid[])",
+          [ids],
+        );
         for (const id of ids) await db.getRepository(Usuario).delete(id);
         await db.destroy();
       }

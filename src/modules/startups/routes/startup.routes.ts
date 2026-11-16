@@ -1,3 +1,4 @@
+import { discoveryRoutes } from './discovery.routes';
 import { StartupInterestService } from "@modules/startups/services/StartupInterestService";
 import { ensureRole } from "@shared/middlewares/ensureRole";
 import { TipoPerfil } from "@shared/enums";
@@ -14,6 +15,7 @@ startupRoutes.use(matchmakingRoutes());
 
 startupRoutes.post("/", startupController.create);
 startupRoutes.get("/", ensureAuthenticated, startupController.listar);
+startupRoutes.use(discoveryRoutes);
 const interests = new StartupInterestService();
 startupRoutes.get(
   "/interesses",

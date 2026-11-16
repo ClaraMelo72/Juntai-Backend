@@ -156,6 +156,10 @@ export class ReuniaoService {
       throw new AppError('Você não participa desta reunião.', 403);
     }
 
+    if (novoStatus === StatusReuniao.REALIZADA && reuniao.dataHoraAgendada.getTime() > Date.now()) {
+      throw new AppError('A reunião só pode ser concluída após o início agendado.', 400);
+    }
+
     const permitido = TRANSICOES_VALIDAS[reuniao.status] ?? [];
     if (!permitido.includes(novoStatus as StatusReuniao)) {
       throw new AppError(`Não é possível mudar de "${reuniao.status}" para "${novoStatus}".`, 400);
