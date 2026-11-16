@@ -1,3 +1,4 @@
+import { AppError } from '@shared/errors/AppError';
 import { Repository } from 'typeorm';
 import { AppDataSource } from '@shared/database/data-source';
 import { Reuniao } from '@modules/reunioes/entities/Reuniao';
@@ -46,7 +47,14 @@ export class ReuniaoRepository {
     });
   }
 
+  async concluirVencidas(): Promise<void> {
+    await AppDataSource.query(`UPDATE reunioes SET status='realizada'
+      WHERE status='agendada' AND data_hora_agendada <= now()-interval '24 hours'`);
+  }
+
   async atualizarStatus(id: string, status: StatusReuniao): Promise<void> {
-    await this.repository.update(id, { status });
+    const result = await this.repository.createQueryBuilder().update(Reuniao).set({ status })
+      .where("id = :id AND status = :agendada", { id, agendada: StatusReuniao.AGENDADA }).execute();
+    if (!result.affected) throw new AppError('O status desta reunião já foi alterado. Atualize a página.', 409);
   }
 }

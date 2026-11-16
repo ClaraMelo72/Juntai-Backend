@@ -7,6 +7,7 @@ import {
   CreateDateColumn,
 } from 'typeorm';
 import { Reuniao } from '@modules/reunioes/entities/Reuniao';
+import { Conversa } from '@modules/conversas/entities/Conversa';
 import { Usuario } from '@modules/usuarios/entities/Usuario';
 
 @Entity({ name: 'avaliacoes' })
@@ -17,6 +18,13 @@ export class Avaliacao {
   @ManyToOne(() => Reuniao, { nullable: true })
   @JoinColumn({ name: 'reuniao_id' })
   reuniao?: Reuniao;
+
+  @ManyToOne(() => Conversa, { nullable: true })
+  @JoinColumn({ name: 'conversa_id' })
+  conversa?: Conversa;
+
+  @Column({ name: 'atualizado_em', type: 'timestamptz', default: () => 'now()' })
+  atualizadoEm!: Date;
 
   @ManyToOne(() => Usuario)
   @JoinColumn({ name: 'avaliador_usuario_id' })

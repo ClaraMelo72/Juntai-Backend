@@ -4,11 +4,14 @@ import 'dotenv/config';
 import app from './App';
 import { AppDataSource } from '@shared/database/data-source';
 
+import { iniciarConclusaoAutomatica } from '@modules/reunioes/services/conclusaoAutomatica';
+
 const PORT = process.env.PORT || 3333; // 3333 pra bater com o Docker
 
 AppDataSource.initialize()
   .then(() => {
     console.log('Banco conectado');
+    iniciarConclusaoAutomatica();
 
     app.listen(PORT, () => {
       console.log(`Servidor rodando na porta ${PORT}`);
