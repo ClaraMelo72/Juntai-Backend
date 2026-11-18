@@ -27,6 +27,9 @@ export class Mensagem {
   @Column({ type: 'text' })
   conteudo!: string;
 
+  @Column({ name: 'ocultada_por_moderacao', type: 'boolean', default: false })
+  ocultadaPorModeracao!: boolean;
+
   @CreateDateColumn({ name: 'enviado_em', type: 'timestamptz' })
   enviadoEm!: Date;
 

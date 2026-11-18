@@ -28,7 +28,7 @@ export class LogAuditoria {
   @Column({ name: 'entidade_tipo', type: 'varchar', length: 30 })
   entidadeTipo!: string;
 
-  @Column({ name: 'entidade_id', type: 'uuid', nullable: true })
+  @Column({ name: 'entidade_id', type: 'varchar', length: 36, nullable: true })
   entidadeId?: string;
 
   @Column({ type: 'jsonb', nullable: true })
