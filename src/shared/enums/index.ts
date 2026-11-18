@@ -84,6 +84,11 @@ export enum AcaoAuditoria {
   REMOCAO_CONTEUDO = 'remocao_conteudo',
   EDICAO_CONTEUDO = 'edicao_conteudo',
   REATIVACAO_USUARIO = 'reativacao_usuario',
+  ANALISE_DENUNCIA = 'analise_denuncia',
+  DECISAO_DENUNCIA = 'decisao_denuncia',
+  ACESSO_EVIDENCIA = 'acesso_evidencia',
+  APLICACAO_SANCAO = 'aplicacao_sancao',
+  REVOGACAO_SANCAO = 'revogacao_sancao',
 }
 
 // ---- Novos enums do mapeamento de campos do front-end ----
