@@ -46,7 +46,7 @@ export class MensagemRepository {
     }> = await AppDataSource.query(
       `SELECT id, conteudo, enviado_em, lido_em, remetente_usuario_id
        FROM mensagens
-       WHERE conversa_id = $1
+       WHERE conversa_id = $1 AND NOT ocultada_por_moderacao
        ORDER BY enviado_em ASC`,
       [conversaId],
     );
@@ -69,6 +69,7 @@ export class MensagemRepository {
       .where('conversa_id = :conversaId', { conversaId })
       .andWhere('remetente_usuario_id <> :usuarioId', { usuarioId })
       .andWhere('lido_em IS NULL')
+      .andWhere('NOT ocultada_por_moderacao')
       .execute();
   }
 }

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { AppDataSource } from '@shared/database/data-source';
 import { Startup } from '@modules/startups/entities/Startup';
 import { ensureAuthenticated } from '@shared/middlewares/ensureAuthenticated';
+import { buscaPerfilStartup, filtrarPerfis } from '@modules/moderacao/services/OcultacaoPerfil';
 export const discoveryRoutes = Router();
 // Bounded, card-only listing. Full profiles remain available at GET /startups/:id.
 discoveryRoutes.get('/discovery', ensureAuthenticated, async (req, res) => {
@@ -37,10 +38,11 @@ discoveryRoutes.get('/discovery', ensureAuthenticated, async (req, res) => {
         .toLowerCase();
     const pattern = (text: string) =>
       '%' + normalized(text).replace(/[\\%_]/g, '\\$&') + '%';
+    const camposBusca = buscaPerfilStartup('s');
     if (value('q'))
       query.andWhere(
         normalize(
-          "concat_ws(' ',s.nome_fantasia,s.descricao_curta,s.descricao_pitch,s.mercado_alvo,s.segmento::text,s.modelo_negocio::text,s.necessidades_adicionais::text)",
+          `concat_ws(' ',${camposBusca.join(',')},s.mercado_alvo,s.segmento::text,s.modelo_negocio::text,s.necessidades_adicionais::text)`,
         ) + ' LIKE :search',
         { search: pattern(value('q').slice(0, 300)) },
       );
@@ -126,7 +128,7 @@ discoveryRoutes.get('/discovery', ensureAuthenticated, async (req, res) => {
       .addSelect(score, 'compatibility')
       .setParameter('scoreUser', req.user!.id);
     const sort = value('sort');
-    if (sort === 'name') selected.orderBy('s.nomeFantasia', 'ASC');
+    if (sort === 'name') selected.addSelect(camposBusca[0], 'nome_visivel').orderBy('nome_visivel', 'ASC');
     else if (sort === 'recent') selected.orderBy('s.criadoEm', 'DESC');
     else if (sort === 'investment')
       selected.orderBy('s.buscaInvestimento', 'DESC');
@@ -149,7 +151,8 @@ discoveryRoutes.get('/discovery', ensureAuthenticated, async (req, res) => {
         .distinct(true)
         .getRawMany(),
     ]);
-    const items = result.entities.map((item, index) => ({
+    const visiveis = await filtrarPerfis('startup', result.entities);
+    const items = visiveis.map((item, index) => ({
       ...item,
       compatibility: Number(result.raw[index].compatibility),
     }));

@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import 'dotenv/config';
 import { DataSource } from 'typeorm';
 import path from 'path';
+import { ModeracaoQueryLogger } from '@modules/moderacao/infra/ModeracaoQueryLogger';
 
 // Aponta para todas as entities dentro de src/modules/<qualquer_modulo>/entities/*.ts
 // Ex.: src/modules/alunos/entities/Aluno.ts será carregado automaticamente.
@@ -20,6 +21,7 @@ export const AppDataSource = new DataSource({
   // Alterações de schema exclusivamente por migrations explicitamente autorizadas.
   synchronize: false,
   logging: process.env.NODE_ENV !== 'production',
+  logger: new ModeracaoQueryLogger(process.env.NODE_ENV !== 'production'),
 
   entities: [entitiesGlob],
   migrations: [migrationsGlob],

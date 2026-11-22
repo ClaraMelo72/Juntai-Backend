@@ -7,6 +7,8 @@ import { Investidor } from "@modules/investidores/entities/Investidor";
 import { LogAuditoria } from "@modules/auditoria/entities/LogAuditoria";
 import { AcaoAuditoria, StatusModeracao, TipoPerfil } from "@shared/enums";
 import { AppError } from "@shared/errors/AppError";
+import { adminDenunciaRoutes } from "@modules/moderacao/routes/admin-denuncia.routes";
+import { sancoesService } from "@modules/moderacao/services/SancaoService";
 
 export const adminRoutes = Router();
 export async function ensureAdmin(
@@ -34,6 +36,7 @@ export async function ensureAdmin(
   }
 }
 adminRoutes.use(ensureAuthenticated, ensureAdmin);
+adminRoutes.use("/denuncias", adminDenunciaRoutes);
 const handler =
   (fn: (req: Request) => Promise<unknown>) =>
   async (req: Request, res: Response) => {
@@ -73,6 +76,9 @@ export function validateDecision(body: Record<string, unknown>) {
     motivo: body.status === "rejeitado" ? String(body.motivo).trim() : null,
   };
 }
+adminRoutes.post("/sancoes/:id/revogacao", handler(req =>
+  sancoesService.revogar(String(req.params.id), req.user!.id, req.body),
+));
 const uuid = (value: unknown) => {
   if (
     typeof value !== "string" ||

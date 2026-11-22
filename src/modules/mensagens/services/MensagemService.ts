@@ -1,5 +1,6 @@
 import { StartupInterestService } from "@modules/startups/services/StartupInterestService";
 import { AppError } from "@shared/errors/AppError";
+import { sancoesService } from "@modules/moderacao/services/SancaoService";
 import { isUuid } from "@shared/validation/isUuid";
 import { TipoPerfil } from "@shared/enums";
 import { Usuario } from "@modules/usuarios/entities/Usuario";
@@ -95,6 +96,7 @@ export class MensagemService {
     if (!remetente || !remetente.ativo) {
       throw new AppError("Usuário remetente inválido.", 401);
     }
+    await sancoesService.verificarAcesso(remetenteId, true);
     if (
       remetente.tipoPerfil !== TipoPerfil.STARTUP &&
       remetente.tipoPerfil !== TipoPerfil.INVESTIDOR

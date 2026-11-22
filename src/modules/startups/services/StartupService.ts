@@ -1,3 +1,4 @@
+import { filtrarPerfil, filtrarPerfis } from '@modules/moderacao/services/OcultacaoPerfil';
 import bcrypt from 'bcrypt';
 import { AppDataSource } from '@shared/database/data-source';
 import { Usuario } from '@modules/usuarios/entities/Usuario';
@@ -196,7 +197,7 @@ export class StartupService {
   // Lista e detalhe nunca carregam o Usuario (ver StartupRepository), então o retorno
   // não tem o campo "usuario" nem chance de vazar senha_hash.
   async listar(): Promise<Startup[]> {
-    return this.startupRepository.listarAprovadas();
+    return filtrarPerfis('startup', await this.startupRepository.listarAprovadas());
   }
 
   async buscarPorId(id: string): Promise<Startup> {
@@ -207,7 +208,7 @@ export class StartupService {
     if (!startup) {
       throw new AppError('Startup não encontrada.', 404);
     }
-    return startup;
+    return filtrarPerfil('startup', startup);
   }
 
   async atualizar(usuarioId: string, startupId: string, dados: UpdateStartupDTO): Promise<Startup> {
@@ -235,6 +236,6 @@ export class StartupService {
       minhaStartup.regioesCrescimento = resolverRegioes(dados.regioesCrescimento);
     }
 
-    return this.startupRepository.salvar(minhaStartup);
+    return filtrarPerfil('startup', await this.startupRepository.salvar(minhaStartup));
   }
 }

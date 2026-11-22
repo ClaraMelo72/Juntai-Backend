@@ -1,11 +1,12 @@
 import { Repository } from "typeorm";
 import { AppDataSource } from "@shared/database/data-source";
 import { Conversa } from "@modules/conversas/entities/Conversa";
+import { campoVisivel } from "@modules/moderacao/services/OcultacaoPerfil";
 
 export interface ConversaResumo {
   conversaId: string;
   usuarioId: string; // o OUTRO participante (quem não está logado), pra abrir GET /mensagens/:usuarioId
-  nome: string;
+  nome: string | null;
   avatarUrl: string | null;
   logoUrl: string | null;
   tipoPerfil: "startup" | "investidor";
@@ -48,11 +49,11 @@ export class ConversaRepository {
   async listarResumoPorUsuario(usuarioId: string): Promise<ConversaResumo[]> {
     const linhas: Array<{
       conversa_id: string;
-      startup_nome: string;
+      startup_nome: string | null;
       startup_logo_url: string | null;
       investidor_avatar_url: string | null;
       startup_usuario_id: string;
-      investidor_nome: string;
+      investidor_nome: string | null;
       investidor_usuario_id: string;
       ultima_mensagem_em: Date | null;
       ultima_mensagem: string | null;
@@ -61,28 +62,31 @@ export class ConversaRepository {
     }> = await AppDataSource.query(
       `SELECT
          c.id AS conversa_id,
-         s.nome_fantasia AS startup_nome, s.logo_url AS startup_logo_url, iu.avatar_url AS investidor_avatar_url,
+         ${campoVisivel('startup', 's.id', 'nomeFantasia', 's.nome_fantasia')} AS startup_nome,
+         ${campoVisivel('startup', 's.id', 'logoUrl', 's.logo_url')} AS startup_logo_url,
+         ${campoVisivel('investidor', 'i.id', 'avatarUrl', 'iu.avatar_url')} AS investidor_avatar_url,
          s.usuario_id AS startup_usuario_id,
-         i.nome AS investidor_nome,
+         ${campoVisivel('investidor', 'i.id', 'nome', 'i.nome')} AS investidor_nome,
          i.usuario_id AS investidor_usuario_id,
-         c.ultima_mensagem_em,
+         lm.enviado_em AS ultima_mensagem_em,
          lm.conteudo AS ultima_mensagem,
          lm.remetente_usuario_id AS ultima_mensagem_remetente_id,
          (SELECT count(*)::int FROM mensagens m2
-            WHERE m2.conversa_id = c.id AND m2.remetente_usuario_id <> $1 AND m2.lido_em IS NULL) AS nao_lidas
+            WHERE m2.conversa_id = c.id AND m2.remetente_usuario_id <> $1 AND m2.lido_em IS NULL
+              AND NOT m2.ocultada_por_moderacao) AS nao_lidas
        FROM conversas c
        JOIN startups s ON s.id = c.startup_id
        JOIN investidores i ON i.id = c.investidor_id
        JOIN usuarios iu ON iu.id = i.usuario_id
        LEFT JOIN LATERAL (
-         SELECT conteudo, remetente_usuario_id
+         SELECT conteudo, remetente_usuario_id, enviado_em
          FROM mensagens m
-         WHERE m.conversa_id = c.id
-         ORDER BY enviado_em DESC
+         WHERE m.conversa_id = c.id AND NOT m.ocultada_por_moderacao
+         ORDER BY enviado_em DESC, id DESC
          LIMIT 1
        ) lm ON true
        WHERE s.usuario_id = $1 OR i.usuario_id = $1
-       ORDER BY c.ultima_mensagem_em DESC NULLS LAST`,
+       ORDER BY lm.enviado_em DESC NULLS LAST`,
       [usuarioId],
     );
 

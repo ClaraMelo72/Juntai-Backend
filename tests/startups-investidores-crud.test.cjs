@@ -1,9 +1,12 @@
 require('ts-node/register/transpile-only');
 require('tsconfig-paths/register');
-const { test } = require('node:test');
+const { test, beforeEach } = require('node:test');
 const assert = require('node:assert/strict');
 const { StartupService } = require('../src/modules/startups/services/StartupService');
 const { InvestidorService } = require('../src/modules/investidores/services/InvestidorService');
+const { AppDataSource } = require('../src/shared/database/data-source');
+
+beforeEach(t => t.mock.method(AppDataSource, 'query', async () => []));
 
 const STARTUP_1 = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 const STARTUP_2 = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';

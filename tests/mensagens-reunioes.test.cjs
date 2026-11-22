@@ -1,7 +1,7 @@
 process.env.JWT_SECRET = "test-only-secret";
 require("ts-node/register/transpile-only");
 require("tsconfig-paths/register");
-const { test } = require("node:test");
+const { test, beforeEach } = require("node:test");
 const assert = require("node:assert/strict");
 const {
   MensagemService,
@@ -9,6 +9,9 @@ const {
 const {
   ReuniaoService,
 } = require("../src/modules/reunioes/services/ReuniaoService");
+const { sancoesService } = require("../src/modules/moderacao/services/SancaoService");
+
+beforeEach(t => t.mock.method(sancoesService, "verificarAcesso", async () => {}));
 
 // Ids de teste em formato de UUID válido: destinatarioId/startupId passam por um isUuid()
 // antes de qualquer mock, então um id tipo "startup-1" é rejeitado (400) antes de chegar lá.

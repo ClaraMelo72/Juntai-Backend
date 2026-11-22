@@ -4,7 +4,7 @@ const ts = require(path.join(root, 'node_modules/typescript'));
 const express = require(path.join(root, 'node_modules/express'));
 const jwt = require(path.join(root, 'node_modules/jsonwebtoken'));
 const updates = [], destroyed = [];
-let owner = true, failSave = false, providerError = null;
+let owner = true, failSave = false, providerError = null, logoOcultado = false;
 const repo = { findOne: async options => { assert.deepEqual(options.select, { id: true }); return owner ? { id: 'startup-test' } : null; },
   update: async (id, data) => { if (failSave) throw new Error('DB error'); updates.push({ id, data }); } };
 const cloud = { config() {}, uploader: {
@@ -20,8 +20,13 @@ function load(relative) {
     if (name === 'jsonwebtoken') return jwt;
     if (name === 'cloudinary') return { v2: cloud };
     if (name === '@shared/config/auth') return { authConfig: { secret: 'test-only-secret' } };
-    if (name === '@shared/database/data-source') return { AppDataSource: { getRepository: () => repo } };
+    if (name === '@shared/database/data-source') return { AppDataSource: {
+      getRepository: () => repo,
+      query: async () => logoOcultado ? [{ alvoId: 'startup-test', campo: 'logoUrl' }] : [],
+    } };
     if (name === '@modules/startups/entities/Startup') return { Startup: class Startup {} };
+    if (name === '@modules/moderacao/services/SancaoService') return { sancoesService: { verificarAcesso: async () => {} } };
+    if (name === '@modules/moderacao/services/OcultacaoPerfil') return load('modules/moderacao/services/OcultacaoPerfil.ts');
     if (name.startsWith('@shared/')) return load(name.replace('@shared/', 'shared/') + (name.endsWith('/enums') ? '/index.ts' : '.ts'));
     return require(name);
   }, module, module.exports);
@@ -32,13 +37,13 @@ const app = express(); app.use('/uploads', load('modules/uploads/routes/upload.r
 (async () => {
   const server = app.listen(0, '127.0.0.1'); await new Promise(resolve => server.once('listening', resolve));
   const base = 'http://127.0.0.1:' + server.address().port + '/uploads/startup/';
-  const token = jwt.sign({ tipoPerfil: 'startup' }, 'test-only-secret', { subject: 'user-test', expiresIn: '1h' });
+  const token = jwt.sign({ tipoPerfil: 'startup' }, 'test-only-secret', { subject: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', expiresIn: '1h' });
   const headers = { Authorization: 'Bearer ' + token, 'Content-Type': 'image/png' };
   const png = Buffer.from('89504e470d0a1a0a', 'hex');
   try {
     assert.equal((await fetch(base+'logo', { method: 'POST', body: png })).status, 401);
     assert.equal((await fetch(base+'logo', { method: 'POST', headers: { ...headers, Authorization: 'Bearer invalid' }, body: png })).status, 401);
-    const investor = jwt.sign({ tipoPerfil: 'investidor' }, 'test-only-secret', { subject: 'other' });
+    const investor = jwt.sign({ tipoPerfil: 'investidor' }, 'test-only-secret', { subject: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' });
     assert.equal((await fetch(base+'logo', { method: 'POST', headers: { ...headers, Authorization: 'Bearer '+investor }, body: png })).status, 403);
     owner = false;
     assert.equal((await fetch(base+'logo', { method: 'POST', headers, body: png })).status, 403);
@@ -50,6 +55,11 @@ const app = express(); app.use('/uploads', load('modules/uploads/routes/upload.r
     const pdfHeaders = { ...headers, 'Content-Type': 'application/pdf', 'X-File-Name': 'pitch.pdf' };
     assert.equal((await fetch(base+'apresentacao', { method: 'POST', headers: pdfHeaders, body: '%PDF-1.4' })).status, 201);
     assert.ok(updates[1].data.apresentacaoUrl.endsWith('.pdf'));
+    logoOcultado = true;
+    const ocultado = await fetch(base+'logo', { method: 'POST', headers, body: png });
+    assert.equal(ocultado.status, 201);
+    assert.deepEqual(await ocultado.json(), { url: null });
+    logoOcultado = false;
     assert.equal((await fetch(base+'apresentacao', { method: 'POST', headers: pdfHeaders, body: 'fake' })).status, 415);
     providerError = { http_code: 499, name: 'TimeoutError' };
     const temporary = await fetch(base+'apresentacao', { method: 'POST', headers: pdfHeaders, body: '%PDF-1.4' });

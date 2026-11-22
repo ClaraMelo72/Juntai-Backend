@@ -21,6 +21,7 @@ export class Denuncia {
   @ManyToOne(() => Usuario, { nullable: true }) @JoinColumn({ name: 'admin_usuario_id' }) adminUsuario?: Usuario;
   @Column({ name: 'justificativa_decisao', type: 'text', nullable: true }) justificativaDecisao?: string;
   @Column({ name: 'evidencia_ref', type: 'text', nullable: true }) evidenciaRef?: string;
+  @Column({ name: 'evidencia_snapshot', type: 'jsonb', nullable: true, select: false }) evidenciaSnapshot?: Record<string, unknown>;
   @Column({ name: 'analise_ia_considerada_id', type: 'uuid', nullable: true }) analiseIaConsideradaId?: string;
   @Column({ name: 'concordancia_ia', type: 'text', nullable: true }) concordanciaIa?: 'concorda' | 'discorda' | 'parcial';
 }

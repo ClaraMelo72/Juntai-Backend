@@ -8,6 +8,7 @@ import { UsuarioRepository } from "@modules/usuarios/repositories/UsuarioReposit
 import { AppDataSource } from "@shared/database/data-source";
 import { Startup } from "@modules/startups/entities/Startup";
 import { Investidor } from "@modules/investidores/entities/Investidor";
+import { campoVisivel, filtrarPerfil } from "@modules/moderacao/services/OcultacaoPerfil";
 
 interface LoginDTO {
   email: string;
@@ -16,7 +17,7 @@ interface LoginDTO {
 
 export interface UsuarioAutenticado {
   id: string;
-  nome: string;
+  nome: string | null;
   email: string;
   tipoPerfil: TipoPerfil;
 }
@@ -70,12 +71,7 @@ export class AuthService {
 
     return {
       token,
-      usuario: {
-        id: usuario.id,
-        nome: usuario.nome,
-        email: usuario.email,
-        tipoPerfil: usuario.tipoPerfil,
-      },
+      usuario: await this.dadosPublicos(usuario),
     };
   }
 
@@ -109,9 +105,21 @@ export class AuthService {
       throw new AppError("Usuário não encontrado ou inativo.", 401);
     }
 
+    return this.dadosPublicos(usuario);
+  }
+
+  private async dadosPublicos(usuario: Usuario): Promise<UsuarioAutenticado> {
+    let nome: string | null = usuario.nome;
+    if (usuario.tipoPerfil === TipoPerfil.INVESTIDOR) {
+      const [conta] = await AppDataSource.query(
+        `SELECT ${campoVisivel('investidor', 'i.id', 'nome', 'u.nome')} AS nome
+         FROM investidores i JOIN usuarios u ON u.id=i.usuario_id WHERE u.id=$1`, [usuario.id],
+      );
+      if (conta) nome = conta.nome;
+    }
     return {
       id: usuario.id,
-      nome: usuario.nome,
+      nome,
       email: usuario.email,
       tipoPerfil: usuario.tipoPerfil,
     };
@@ -132,8 +140,8 @@ export class AuthService {
         select: { id: true, avatarUrl: true },
         where: { id: usuario.id },
       });
-      return Object.assign(profile, { avatarUrl: account?.avatarUrl ?? null });
+      return filtrarPerfil('investidor', Object.assign(profile, { avatarUrl: account?.avatarUrl ?? null }));
     }
-    return profile;
+    return filtrarPerfil('startup', profile);
   }
 }

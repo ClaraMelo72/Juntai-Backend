@@ -18,7 +18,7 @@ const {MatchmakingService}=require('../src/modules/matchmaking/MatchmakingServic
 test('highlights expose scores and public profiles without account data',async(t)=>{
  const profiles=[1,2,3].map(i=>({id:String(i),nomeFantasia:'Startup '+i,usuario:{senhaHash:'must-not-leak'}}));
  const query={where(){return this},async getMany(){return profiles}};
- const service=new MatchmakingService({getRepository(){return {createQueryBuilder(){return query}}}});
+ const service=new MatchmakingService({async query(){return []},getRepository(){return {createQueryBuilder(){return query}}}});
  t.mock.method(service,'recommend',async()=>({recomendacoes:profiles.map((p,i)=>({startupId:p.id,score:1-i*.1,scoreRanking:1-i*.1,origemRecomendacao:'rules',contextoExposicao:'signed-context'}))}));
  const result=await service.highlights('approved-user');
  assert.equal(result.items.length,3);assert.equal(result.items[0].compatibility,100);
