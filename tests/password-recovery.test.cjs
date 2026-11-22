@@ -37,10 +37,10 @@ test('recovery sends a fragment link and consumes a hashed token once', async ()
     assert.match(token, /^[a-f0-9]{64}$/);
     assert.notEqual(token, savedTokenHash);
     assert.match(lastAuthorization, /^HMAC-SHA256 /);
-    await resetPassword(token, 'new-password');
-    assert.ok(await bcrypt.compare('new-password', passwordHash));
-    await assert.rejects(resetPassword(token, 'new-password'), /inválido ou expirado/);
-    await assert.rejects(resetPassword(token, 'short'), /requisitos/);
+    await resetPassword(token, 'Senha-Forte1');
+    assert.ok(await bcrypt.compare('Senha-Forte1', passwordHash));
+    await assert.rejects(resetPassword(token, 'Senha-Forte1'), /inválido ou expirado/);
+    await assert.rejects(resetPassword(token, 'short'), /maiúsculas/);
   } finally {
     AppDataSource.transaction = originalTransaction;
     global.fetch = originalFetch;

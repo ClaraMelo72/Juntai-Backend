@@ -1,3 +1,4 @@
+import { validatePassword } from '@modules/auth/services/passwordPolicy';
 import bcrypt from 'bcrypt';
 import { AppDataSource } from '@shared/database/data-source';
 import { Usuario } from '@modules/usuarios/entities/Usuario';
@@ -123,6 +124,7 @@ export class StartupService {
   private startupRepository = new StartupRepository();
 
   async create(data: CreateStartupDTO): Promise<StartupResponse> {
+    validatePassword(data.senha);
     const usuarioRepo = AppDataSource.getRepository(Usuario);
 
     const emailExiste = await usuarioRepo.findOne({ where: { email: data.email } });

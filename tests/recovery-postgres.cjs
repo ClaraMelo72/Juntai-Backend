@@ -40,14 +40,14 @@ const jwt = require('jsonwebtoken');
     const existing = await db.query('SELECT token_hash FROM password_recovery_tokens');
     assert.notEqual(existing[0].token_hash, token);
     const oldToken = jwt.sign({ tipoPerfil: 'startup', sessionVersion: 0 }, process.env.JWT_SECRET, { subject: id });
-    const results = await Promise.allSettled([resetPassword(token, 'password-one'), resetPassword(token, 'password-two')]);
+    const results = await Promise.allSettled([resetPassword(token, 'Senha-Forte1'), resetPassword(token, 'Senha-Forte2')]);
     assert.equal(results.filter(r => r.status === 'fulfilled').length, 1, 'Only one concurrent reset succeeds');
     assert.equal((await db.query('SELECT session_version FROM usuarios WHERE id = $1', [id]))[0].session_version, 1);
     let status = 200;
     await ensureAuthenticated({ headers: { authorization: `Bearer ${oldToken}` } }, { status(n) { status = n; return this; }, json() { return this; } }, () => { throw new Error('old session accepted'); });
     assert.equal(status, 401);
     await db.query("INSERT INTO password_recovery_tokens(token_hash,user_id,expires_at) VALUES ($1,$2,now()-interval '1 minute')", [createHash('sha256').update('a'.repeat(64)).digest('hex'), id]);
-    await assert.rejects(resetPassword('a'.repeat(64), 'password-one'), /inválido ou expirado/);
+    await assert.rejects(resetPassword('a'.repeat(64), 'Senha-Forte1'), /inválido ou expirado/);
     console.log('PostgreSQL: migration, hash, concurrent single use, expired token and session revocation passed.');
   } finally { await db.destroy(); }
 })().catch(e => { console.error(e); process.exitCode = 1; });

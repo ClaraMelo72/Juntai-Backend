@@ -1,3 +1,4 @@
+import { validatePassword } from '@modules/auth/services/passwordPolicy';
 import { createHash, createHmac, randomBytes } from 'node:crypto';
 import bcrypt from 'bcrypt';
 import { AppDataSource } from '@shared/database/data-source';
@@ -55,8 +56,9 @@ export async function requestPasswordRecovery(value: unknown): Promise<void> {
 }
 
 export async function resetPassword(token: unknown, password: unknown): Promise<void> {
-  if (typeof token !== 'string' || !/^[a-f0-9]{64}$/.test(token) || typeof password !== 'string' || password.length < 8 || Buffer.byteLength(password, 'utf8') > 72)
+  if (typeof token !== 'string' || !/^[a-f0-9]{64}$/.test(token))
     throw new AppError('Link inválido ou senha fora dos requisitos.', 400);
+  validatePassword(password);
   const passwordHash = await bcrypt.hash(password, 10);
   const changed = await AppDataSource.transaction(async (manager) => {
     const rows = await manager.query('WITH consumed AS (DELETE FROM password_recovery_tokens WHERE token_hash = $1 AND expires_at > now() RETURNING user_id) SELECT user_id FROM consumed', [hash(token)]);
