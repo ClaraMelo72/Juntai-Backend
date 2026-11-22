@@ -7,6 +7,7 @@ import { TipoPerfil } from "@shared/enums";
 import { AppDataSource } from "@shared/database/data-source";
 import { Usuario } from "@modules/usuarios/entities/Usuario";
 import { Investidor } from "@modules/investidores/entities/Investidor";
+import { filtrarPerfil } from "@modules/moderacao/services/OcultacaoPerfil";
 
 export const avatarRoutes = Router();
 const requests = new Map<string, { count: number; expires: number }>();
@@ -22,7 +23,7 @@ async function owner(id: string) {
       select: { id: true },
       where: { usuario: { id } },
     }));
-  return Boolean(user && profile);
+  return profile;
 }
 avatarRoutes.post(
   "/investidor/avatar",
@@ -62,7 +63,8 @@ avatarRoutes.post(
         .json({ message: "Use uma foto PNG, JPG ou WebP de até 2 MB." });
     let publicId: string | undefined;
     try {
-      if (!(await owner(req.user!.id)))
+      const profile = await owner(req.user!.id);
+      if (!profile)
         return res
           .status(403)
           .json({ message: "Perfil de investidor não encontrado ou inativo." });
@@ -91,7 +93,9 @@ avatarRoutes.post(
       await AppDataSource.getRepository(Usuario).update(req.user!.id, {
         avatarUrl: url,
       });
-      return res.status(201).json({ url });
+      publicId = undefined;
+      const visivel = await filtrarPerfil('investidor', { id: profile.id, avatarUrl: url });
+      return res.status(201).json({ url: visivel.avatarUrl });
     } catch {
       if (publicId) await cloudinary.uploader.destroy(publicId).catch(() => {});
       return res

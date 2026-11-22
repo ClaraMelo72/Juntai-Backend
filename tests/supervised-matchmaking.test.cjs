@@ -18,7 +18,7 @@ function store(){
  function repository(entity){const actor=entity.name==='Investidor';const q=new Proxy({}, {get(_,name){if(name==='getOne')return async()=>actor?investor:startup;if(name==='getMany')return async()=>candidates;if(name==='getCount')return async()=>candidates.length;if(name==='getRawMany')return async()=>[{estado:'PE',segmento:'agtech',regioes:['nordeste']}];return()=>q;}});return{createQueryBuilder:()=>q};}
  const saved=new Map();
  const manager={getRepository:repository,query:async(sql,values)=>{calls.push(sql);if(sql.startsWith('INSERT')){saved.set(values[0],{id:values[0],ocorrido_em:new Date('2026-01-01'),snapshot:JSON.parse(values[6])});return[saved.get(values[0])];}return saved.has(values[0])?[saved.get(values[0])]:[];}};
- return{investor,startup,candidates,calls,db:{manager,getRepository:repository,transaction:fn=>fn(manager)}};
+ return{investor,startup,candidates,calls,db:{manager,getRepository:repository,query:async()=>[],transaction:fn=>fn(manager)}};
 }
 function strategy(t,value){const old=process.env.MATCHMAKING_STRATEGY;if(value===undefined)delete process.env.MATCHMAKING_STRATEGY;else process.env.MATCHMAKING_STRATEGY=value;t.after(()=>{if(old===undefined)delete process.env.MATCHMAKING_STRATEGY;else process.env.MATCHMAKING_STRATEGY=old;});}
 function supervisedResponse(payload){const response=clone(fixture.response);response.investidorId=payload.investidor.id;response.recomendacoes=payload.startups.slice(0,payload.limite).map((s,i)=>({...clone(fixture.response.recomendacoes[0]),startupId:s.id,posicao:i+1,probabilidadeInteresse:1-i*.1}));return response;}

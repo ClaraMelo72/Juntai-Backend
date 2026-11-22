@@ -40,6 +40,9 @@ export class Avaliacao {
   @Column({ type: 'text', nullable: true })
   comentario?: string;
 
+  @Column({ name: 'comentario_ocultado_por_moderacao', type: 'boolean', default: false })
+  comentarioOcultadoPorModeracao!: boolean;
+
   @Column({ name: 'resultado_interacao', type: 'text', default: 'em_analise' })
   resultadoInteracao!: 'em_analise' | 'avancar' | 'nao_seguir';
 

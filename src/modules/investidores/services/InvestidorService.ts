@@ -1,4 +1,5 @@
 import { validatePassword } from '@modules/auth/services/passwordPolicy';
+import { filtrarPerfil, filtrarPerfis } from '@modules/moderacao/services/OcultacaoPerfil';
 import bcrypt from 'bcrypt';
 import { AppDataSource } from '@shared/database/data-source';
 import { Usuario } from '@modules/usuarios/entities/Usuario';
@@ -163,7 +164,7 @@ export class InvestidorService {
   // Lista e detalhe nunca carregam o Usuario (ver InvestidorRepository), então o retorno
   // não tem o campo "usuario" nem chance de vazar senha_hash.
   async listar(): Promise<Investidor[]> {
-    return this.investidorRepository.listarTodas();
+    return filtrarPerfis('investidor', await this.investidorRepository.listarTodas());
   }
 
   async buscarPorId(id: string): Promise<Investidor> {
@@ -174,7 +175,7 @@ export class InvestidorService {
     if (!investidor) {
       throw new AppError('Investidor não encontrado.', 404);
     }
-    return investidor;
+    return filtrarPerfil('investidor', investidor);
   }
 
   async atualizar(usuarioId: string, investidorId: string, dados: UpdateInvestidorDTO): Promise<Investidor> {
@@ -199,6 +200,6 @@ export class InvestidorService {
       meuInvestidor.regioesInteresse = resolverRegiao(dados.regiao);
     }
 
-    return this.investidorRepository.salvar(meuInvestidor);
+    return filtrarPerfil('investidor', await this.investidorRepository.salvar(meuInvestidor));
   }
 }

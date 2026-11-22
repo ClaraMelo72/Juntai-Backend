@@ -12,6 +12,7 @@ const { Usuario } = require('../src/modules/usuarios/entities/Usuario');
 for (const [role, entity] of [['startup', Startup], ['investidor', Investidor]]) {
   test(`loads only the authenticated ${role} profile without the user relation`, async (t) => {
     const service = new AuthService();
+    t.mock.method(AppDataSource, 'query', async () => []);
     t.mock.method(service.usuarioRepository, 'findById', async (id) => ({ id, ativo: true, tipoPerfil: role }));
     t.mock.method(AppDataSource, 'getRepository', (target) => {
       if (role === 'investidor' && target === Usuario) {

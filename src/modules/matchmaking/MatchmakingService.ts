@@ -10,6 +10,7 @@ import { MatchmakingClient } from './MatchmakingClient';
 import { Context, issueContext, readContext } from './ExposureContext';
 import { investorFeatures, startupFeatures, project, rulesProfile, Profile } from './contracts';
 import { SupervisedContractError, supervisedInvestorFeatures, supervisedStartupFeatures, supervisedProfile } from './supervisedContracts';
+import { buscaPerfilStartup, filtrarPerfis } from '@modules/moderacao/services/OcultacaoPerfil';
 
 export function profileRevision(profile: Profile, investor: boolean, supervised = false): string {
   const keys = supervised ? (investor ? supervisedInvestorFeatures : supervisedStartupFeatures) : (investor ? investorFeatures : startupFeatures);
@@ -91,7 +92,8 @@ export class MatchmakingService {
     if (!chosen.length) return { items: [] };
     const startups = await this.db.getRepository(Startup).createQueryBuilder('s')
       .where('s.id IN (:...ids)', { ids: chosen.map(item => item.startupId) }).getMany();
-    const byId = new Map(startups.map(item => [item.id, item]));
+    const visiveis = await filtrarPerfis('startup', startups, this.db);
+    const byId = new Map(visiveis.map(item => [item.id, item]));
     return { items: chosen.filter(item => byId.has(item.startupId)).map(item => {
       const { usuario, ...profile } = byId.get(item.startupId)!;
       return { ...profile, compatibility: item.origemRecomendacao === 'rules' ? item.score * 100 : undefined,
@@ -107,7 +109,8 @@ export class MatchmakingService {
     const query = this.db.getRepository(Startup).createQueryBuilder('s').innerJoin('s.usuario', 'u')
       .where('s.statusModeracao = :status AND u.ativo = true', { status: 'aprovado' });
     for (const [key, column] of Object.entries({ segment: 's.segmento', stage: 's.estagio', model: 's.modelo_negocio' })) if (params[key]) query.andWhere(`${column}::text = :${key}`, { [key]: params[key] });
-    if (params.q) query.andWhere("concat_ws(' ',s.nome_fantasia,s.descricao_curta,s.descricao_pitch,s.mercado_alvo) ILIKE :q", { q: '%' + params.q + '%' });
+    const camposBusca = buscaPerfilStartup('s');
+    if (params.q) query.andWhere(`concat_ws(' ',${camposBusca.join(',')},s.mercado_alvo) ILIKE :q`, { q: '%' + params.q + '%' });
     if (params.location) query.andWhere("concat_ws(' ',s.cidade,s.estado,array_to_string(s.regioes_atuacao, ' ')) ILIKE :location", { location: '%' + params.location + '%' });
     if (params.investment) {
       if (!['yes', 'no'].includes(params.investment)) throw new AppError('Filtro inválido.', 400);
@@ -124,28 +127,28 @@ export class MatchmakingService {
       if (!ids.length) query.andWhere('false'); else query.andWhere('s.id IN (:...ids)', { ids });
     }
     const total = await query.getCount();
-    let items: Profile[];
     if (params.sort === 'compatibility') {
       const candidates = await query.clone().innerJoinAndSelect('s.usuario', 'rankingUser').getMany();
       const all = await this.rankCandidates(investor, candidates, 1000);
       const permitted = new Map(candidates.map(s => [s.id, s]));
       const ranked = all.recomendacoes.filter(r => permitted.has(r.startupId));
-      items = ranked.slice(page * size, (page + 1) * size).map(r => {
+      const items = ranked.slice(page * size, (page + 1) * size).map(r => {
         const { usuario, ...publicStartup } = permitted.get(r.startupId)!;
         return { ...publicStartup, compatibility: r.origemRecomendacao === 'rules' && r.score != null ? r.score * 100 : undefined,
           probabilidadeInteresse: r.probabilidadeInteresse, posicaoRanking: r.posicaoRanking, origemRecomendacao: r.origemRecomendacao,
           versaoModelo: r.versaoModelo, avisos: r.avisos, contextoExposicao: r.contextoExposicao };
       });
-      return { items, total: ranked.length, hasMore: (page + 1) * size < ranked.length, facets: await this.facets(query),
+      return { items: await filtrarPerfis('startup', items, this.db), total: ranked.length, hasMore: (page + 1) * size < ranked.length, facets: await this.facets(query),
         origemRecomendacao: all.origemRecomendacao, ...('fallback' in all ? { fallback: all.fallback } : {}), ...('avisos' in all ? { avisos: all.avisos } : {}) };
     }
-    const order = params.sort === 'name' ? 's.nomeFantasia' : params.sort === 'investment' ? 's.buscaInvestimento' : 's.criadoEm';
+    if (params.sort === 'name') query.addSelect(camposBusca[0], 'nome_visivel');
+    const order = params.sort === 'name' ? 'nome_visivel' : params.sort === 'investment' ? 's.buscaInvestimento' : 's.criadoEm';
     const found = await query.orderBy(order, params.sort === 'name' ? 'ASC' : 'DESC').addOrderBy('s.id', 'ASC').skip(page * size).take(size).getMany();
-    items = found.map(s => {
+    const items = found.map(s => {
       const { usuario, ...publicStartup } = s;
       return { ...publicStartup, contextoExposicao: this.context(investor, s, 'discovery', null, null) };
     });
-    return { items, total, hasMore: (page + 1) * size < total, facets: await this.facets(query) };
+    return { items: await filtrarPerfis('startup', items, this.db), total, hasMore: (page + 1) * size < total, facets: await this.facets(query) };
   }
   private async facets(query: any) {
     // Facetas preservam os filtros, mas não precisam da ordenação da listagem.

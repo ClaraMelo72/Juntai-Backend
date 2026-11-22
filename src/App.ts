@@ -11,6 +11,8 @@ import { mensagemRoutes } from "@modules/mensagens/routes/mensagem.routes";
 import { reuniaoRoutes } from "@modules/reunioes/routes/reuniao.routes";
 
 import { avaliacaoRoutes } from '@modules/avaliacoes/routes/avaliacao.routes';
+import { denunciaRoutes } from '@modules/moderacao/routes/denuncia.routes';
+import { sancaoRoutes } from '@modules/moderacao/routes/sancao.routes';
 
 class App {
   public express: Application;
@@ -45,6 +47,8 @@ class App {
     this.express.use("/mensagens", mensagemRoutes);
     this.express.use("/reunioes", reuniaoRoutes);
     this.express.use("/avaliacoes", avaliacaoRoutes);
+    this.express.use(denunciaRoutes);
+    this.express.use(sancaoRoutes);
   }
 }
 

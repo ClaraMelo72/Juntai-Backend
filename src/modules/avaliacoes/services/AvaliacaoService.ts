@@ -1,6 +1,10 @@
 import { AppDataSource as db } from '@shared/database/data-source';
 import { AppError } from '@shared/errors/AppError';
 import { isUuid } from '@shared/validation/isUuid';
+import { campoVisivel } from '@modules/moderacao/services/OcultacaoPerfil';
+
+const nomeInvestidor = campoVisivel('investidor', 'i.id', 'nome', 'i.nome');
+const nomeStartup = campoVisivel('startup', 's.id', 'nomeFantasia', 's.nome_fantasia');
 
 export function validarContexto(tipo: string, id: string) {
   if (!['conversa', 'reuniao'].includes(tipo) || !(tipo === 'conversa' ? isUuid(id) : /^[1-9]\d{0,18}$/.test(id) && BigInt(id) <= 9223372036854775807n))
@@ -39,7 +43,7 @@ export class AvaliacaoService {
     validarContexto(tipo, id);
     const tabela = tipo === 'conversa' ? 'conversas' : 'reunioes';
     const [ctx] = await db.query(`SELECT c.id, s.usuario_id AS startup, i.usuario_id AS investidor,
-      CASE WHEN s.usuario_id=$2 THEN i.nome ELSE s.nome_fantasia END AS nome,
+      CASE WHEN s.usuario_id=$2 THEN ${nomeInvestidor} ELSE ${nomeStartup} END AS nome,
       ${tipo === 'reuniao' ? "c.status='realizada'" : `(EXISTS (SELECT 1 FROM mensagens m WHERE m.conversa_id=c.id AND m.remetente_usuario_id=s.usuario_id)
         AND EXISTS (SELECT 1 FROM mensagens m WHERE m.conversa_id=c.id AND m.remetente_usuario_id=i.usuario_id))`} AS elegivel
       FROM ${tabela} c JOIN startups s ON s.id=c.startup_id JOIN investidores i ON i.id=c.investidor_id
@@ -55,7 +59,8 @@ export class AvaliacaoService {
     // One snapshot: expose only the other participant's investment declaration, never their private review.
     const [state] = await db.query(`SELECT
       (SELECT row_to_json(minha) FROM (
-        SELECT id::text, nota, comentario, resultado_interacao AS "resultadoInteracao",
+        SELECT id::text, nota, CASE WHEN NOT comentario_ocultado_por_moderacao THEN comentario END AS comentario,
+          resultado_interacao AS "resultadoInteracao",
           perspectiva_investimento AS "perspectivaInvestimento", criado_em AS "criadoEm", atualizado_em AS "atualizadoEm"
         FROM avaliacoes WHERE ${coluna}=$1 AND avaliador_usuario_id=$2
       ) minha) AS avaliacao,
@@ -78,7 +83,8 @@ export class AvaliacaoService {
     await db.query(`INSERT INTO avaliacoes (${coluna}, avaliador_usuario_id, avaliado_usuario_id, nota, comentario, resultado_interacao, perspectiva_investimento)
       VALUES ($1,$2,$3,$4,$5,COALESCE($6,'em_analise'),COALESCE($7,'nao_definido'))
       ON CONFLICT (${coluna}, avaliador_usuario_id) WHERE ${coluna} IS NOT NULL
-      DO UPDATE SET nota=EXCLUDED.nota, comentario=EXCLUDED.comentario,
+      DO UPDATE SET nota=EXCLUDED.nota,
+        comentario=CASE WHEN avaliacoes.comentario_ocultado_por_moderacao THEN avaliacoes.comentario ELSE EXCLUDED.comentario END,
         resultado_interacao=COALESCE($6,avaliacoes.resultado_interacao),
         perspectiva_investimento=COALESCE($7,avaliacoes.perspectiva_investimento), atualizado_em=now()`,
       [id, usuarioId, avaliado, valor.nota, valor.comentario, metricas.resultado, metricas.perspectiva]);
@@ -93,7 +99,7 @@ export class AvaliacaoService {
   }
   async pendentes(usuarioId: string) {
     return db.query(`SELECT r.id::text, 'reuniao' AS tipo,
-      CASE WHEN s.usuario_id=$1 THEN i.nome ELSE s.nome_fantasia END AS nome
+      CASE WHEN s.usuario_id=$1 THEN ${nomeInvestidor} ELSE ${nomeStartup} END AS nome
       FROM reunioes r JOIN startups s ON s.id=r.startup_id JOIN investidores i ON i.id=r.investidor_id
       JOIN usuarios u ON u.id=$1 AND u.ativo=true
       WHERE r.status='realizada' AND (s.usuario_id=$1 OR i.usuario_id=$1)

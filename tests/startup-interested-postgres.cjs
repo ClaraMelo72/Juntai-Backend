@@ -19,6 +19,7 @@ const {StartupReceivedInterestsService:Service}=require('../src/modules/startups
  CREATE TABLE funil_interacoes(startup_id uuid,investidor_id uuid,tipo_evento text,ocorrido_em timestamptz DEFAULT now());
  CREATE TABLE conversas(id uuid PRIMARY KEY,startup_id uuid,investidor_id uuid);
  CREATE TABLE mensagens(conversa_id uuid,remetente_usuario_id uuid);
+ CREATE TABLE campos_perfil_ocultados(tipo_alvo text,alvo_id uuid,campo_alvo text,restaurado_em timestamptz);
  CREATE TABLE reunioes(id bigserial PRIMARY KEY,startup_id uuid,investidor_id uuid,status text,data_hora_agendada timestamptz);`);
  db.query=query;
  const su=randomUUID(),su2=randomUUID(),s=randomUUID(),s2=randomUUID(),users=Array.from({length:5},randomUUID),investors=Array.from({length:5},randomUUID);

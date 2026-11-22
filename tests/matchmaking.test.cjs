@@ -77,7 +77,7 @@ function fakeStore() {
     if (sql.startsWith('INSERT')) { saved = { id: values[0], ocorrido_em: new Date('2026-01-01T00:00:00Z') }; return [saved]; }
     return saved ? [saved] : [];
   } };
-  const db = { manager, getRepository: repository, transaction: async fn => fn(manager) };
+  const db = { manager, getRepository: repository, query: async () => [], transaction: async fn => fn(manager) };
   return { investor, startup, calls, candidates, db, context: () => issueContext({ investorId: investor.id, startupId: startup.id, investorRevision: profileRevision(investor, true), startupRevision: profileRevision(startup, false), origin: 'rules', position: 1, version: '1a-v3' }) };
 }
 test('cálculo não persiste exposição, payload exclui informações pessoais', async () => {
@@ -163,12 +163,15 @@ test('rotas: autenticação, RBAC, validação e identidade derivada do JWT', as
   const { AppDataSource } = require('../src/shared/database/data-source');
   let currentRole;
   t.mock.method(AppDataSource, 'query', async () => [{ tipo_perfil: currentRole, session_version: 0, ativo: true }]);
+  const { sancoesService } = require('../src/modules/moderacao/services/SancaoService');
+  t.mock.method(sancoesService, 'verificarAcesso', async () => {});
+  const usuarioId = fixture.request.investidor.usuario.id;
   const calls = [];
   const service = { recommend: async (user, limit) => { calls.push([user, limit]); return {}; }, confirmExposure: async () => ({}) };
   const router = matchmakingRoutes(service);
   async function invoke(url, role, body, method = 'GET') {
     currentRole = role;
-    const headers = role ? { authorization: 'Bearer ' + jwt.sign({ tipoPerfil: role }, process.env.JWT_SECRET, { subject: 'authenticated-user' }) } : {};
+    const headers = role ? { authorization: 'Bearer ' + jwt.sign({ tipoPerfil: role }, process.env.JWT_SECRET, { subject: usuarioId }) } : {};
     const req = { method, url, headers, query: {}, body };
     return new Promise((resolve, reject) => {
       const res = { statusCode: 200, status(n) { this.statusCode = n; return this; }, json(value) { resolve({ status: this.statusCode, value }); } };
@@ -178,7 +181,7 @@ test('rotas: autenticação, RBAC, validação e identidade derivada do JWT', as
   assert.equal((await invoke('/recomendacoes')).status, 401);
   assert.equal((await invoke('/recomendacoes', 'startup')).status, 403);
   assert.equal((await invoke('/recomendacoes', 'investidor')).status, 200);
-  assert.deepEqual(calls, [['authenticated-user', 24]]);
+  assert.deepEqual(calls, [[usuarioId, 24]]);
   assert.equal((await invoke('/exposicoes', 'investidor', { contexto: 'x', investidor_id: 'arbitrary' }, 'POST')).status, 400);
 });
 test('interesse continua idempotente e preserva a primeira data', async t => {

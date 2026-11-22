@@ -1,3 +1,4 @@
+import { filtrarPerfil } from '@modules/moderacao/services/OcultacaoPerfil';
 import { Router, raw, type ErrorRequestHandler } from 'express';
 import { randomUUID } from 'node:crypto';
 import { v2 as cloudinary } from 'cloudinary';
@@ -56,8 +57,11 @@ uploadRoutes.post('/startup/:kind', ensureAuthenticated, ensureRole(TipoPerfil.S
       }).end(file);
     });
     stage = 'database';
-    await repo.update(startup.id, kind === 'logo' ? { logoUrl: url } : { apresentacaoUrl: url });
-    return res.status(201).json({ url });
+    const campo = kind === 'logo' ? 'logoUrl' : 'apresentacaoUrl';
+    await repo.update(startup.id, { [campo]: url });
+    uploaded = undefined;
+    const perfil = await filtrarPerfil('startup', { id: startup.id, [campo]: url });
+    return res.status(201).json({ url: perfil[campo] });
   } catch (error) {
     const failure = error as { code?: string; http_code?: number; name?: string };
     console.error('Startup upload failed', { stage, code: failure?.code, httpCode: failure?.http_code, name: failure?.name });

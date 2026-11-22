@@ -4,6 +4,7 @@ const {Client}=require('pg');const {randomUUID}=require('node:crypto');const ass
 const {AppDataSource:db}=require('../src/shared/database/data-source');
 const {FeedbackInteracoes1794787200000:Migration}=require('../src/shared/database/migrations/1794787200000-FeedbackInteracoes');
 const {FeedbackResultados1794787200001:MetricasMigration}=require('../src/shared/database/migrations/1794787200001-FeedbackResultados');
+const {ModeracaoIa1794873600000:ModeracaoMigration}=require('../src/shared/database/migrations/1794873600000-ModeracaoIa');
 const {AvaliacaoService}=require('../src/modules/avaliacoes/services/AvaliacaoService');
 const {ReuniaoRepository}=require('../src/modules/reunioes/repositories/ReuniaoRepository');
 async function main(){
@@ -13,7 +14,9 @@ async function main(){
  const schema='feedback_test_'+randomUUID().replaceAll('-','');
  try {
  await query('BEGIN');await query(`CREATE SCHEMA ${schema}`);await query(`SET LOCAL search_path TO ${schema}`);
- await query(`CREATE TABLE usuarios(id uuid PRIMARY KEY,ativo boolean DEFAULT true);
+ await query(`CREATE TYPE acao_auditoria_enum AS ENUM ('remocao_conteudo');
+ CREATE TABLE log_auditoria(entidade_id uuid);
+ CREATE TABLE usuarios(id uuid PRIMARY KEY,ativo boolean DEFAULT true);
  CREATE TABLE startups(id uuid PRIMARY KEY,usuario_id uuid REFERENCES usuarios(id),nome_fantasia text);
  CREATE TABLE investidores(id uuid PRIMARY KEY,usuario_id uuid REFERENCES usuarios(id),nome text);
  CREATE TABLE conversas(id uuid PRIMARY KEY,startup_id uuid,investidor_id uuid);
@@ -26,6 +29,7 @@ async function main(){
  await query('INSERT INTO conversas VALUES($1,$2,$3)',[c,s,i]);
  await query('INSERT INTO avaliacoes(conversa_id,avaliador_usuario_id,avaliado_usuario_id,nota,comentario) VALUES($1,$2,$3,3,$4)',[c,a,b,'Historico preservado']);
  await new MetricasMigration().up({query});
+ await new ModeracaoMigration().up({query});
  const [legacy]=await query('SELECT nota,comentario,resultado_interacao,perspectiva_investimento FROM avaliacoes');
  assert.deepEqual(legacy,{nota:3,comentario:'Historico preservado',resultado_interacao:'em_analise',perspectiva_investimento:'nao_definido'});
  const service=new AvaliacaoService();

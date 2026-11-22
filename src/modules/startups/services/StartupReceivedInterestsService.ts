@@ -1,3 +1,4 @@
+import { campoVisivel } from '@modules/moderacao/services/OcultacaoPerfil';
 import { AppDataSource as db } from '@shared/database/data-source';
 import { AppError } from '@shared/errors/AppError';
 import { isUuid } from '@shared/validation/isUuid';
@@ -9,9 +10,14 @@ export class StartupReceivedInterestsService {
       WHERE u.id=$1 AND u.ativo=true AND u.tipo_perfil='startup' AND s.status_moderacao='aprovado'`, [userId]);
     if (!actor) throw new AppError('Somente startups aprovadas podem consultar seus interessados.', 403);
     // Project only public profile fields; the startup comes exclusively from the authenticated account.
-    const items = await db.query(`SELECT i.id AS "investidorId", u.id AS "usuarioId", i.nome,
-      u.avatar_url AS "avatarUrl", i.tipo_investidor AS "tipoInvestidor", i.titulo_profissional AS "tituloProfissional",
-      i.bio, i.cidade, i.estado, i.linkedin_url AS "linkedinUrl", i.descricao_experiencia AS "descricaoExperiencia",
+    const items = await db.query(`SELECT i.id AS "investidorId", u.id AS "usuarioId",
+      ${campoVisivel('investidor', 'i.id', 'nome', 'i.nome')} AS nome,
+      ${campoVisivel('investidor', 'i.id', 'avatarUrl', 'u.avatar_url')} AS "avatarUrl",
+      i.tipo_investidor AS "tipoInvestidor",
+      ${campoVisivel('investidor', 'i.id', 'tituloProfissional', 'i.titulo_profissional')} AS "tituloProfissional",
+      ${campoVisivel('investidor', 'i.id', 'bio', 'i.bio')} AS bio, i.cidade, i.estado,
+      ${campoVisivel('investidor', 'i.id', 'linkedinUrl', 'i.linkedin_url')} AS "linkedinUrl",
+      ${campoVisivel('investidor', 'i.id', 'descricaoExperiencia', 'i.descricao_experiencia')} AS "descricaoExperiencia",
       i.anos_experiencia AS "anosExperiencia", COALESCE(i.areas_ajuda::text[],'{}'::text[]) AS "areasAjuda", COALESCE(i.segmentos_interesse::text[],'{}'::text[]) AS "segmentosInteresse",
       COALESCE(i.estagios_interesse::text[],'{}'::text[]) AS "estagiosInteresse", e.interessado_em AS "interessadoEm",
       CASE WHEN cm.iniciada THEN c.id ELSE NULL END AS "conversaId",

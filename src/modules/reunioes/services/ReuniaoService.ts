@@ -6,13 +6,14 @@ import { StartupRepository } from '@modules/startups/repositories/StartupReposit
 import { InvestidorRepository } from '@modules/investidores/repositories/InvestidorRepository';
 import { ReuniaoRepository } from '@modules/reunioes/repositories/ReuniaoRepository';
 import { Reuniao } from '@modules/reunioes/entities/Reuniao';
+import { filtrarPerfis } from '@modules/moderacao/services/OcultacaoPerfil';
 
 export interface ReuniaoResumo {
   id: string;
   startupId: string;
-  startupNome: string;
+  startupNome: string | null;
   investidorId: string;
-  investidorNome: string;
+  investidorNome: string | null;
   dataHoraAgendada: Date;
   status: StatusReuniao;
   linkReuniao: string | null;
@@ -20,19 +21,23 @@ export interface ReuniaoResumo {
   criadoEm: Date;
 }
 
-function paraResumo(reuniao: Reuniao): ReuniaoResumo {
-  return {
+async function paraResumos(reunioes: Reuniao[]): Promise<ReuniaoResumo[]> {
+  const [startups, investidores] = await Promise.all([
+    filtrarPerfis('startup', reunioes.map(({ startup }) => ({ id: startup.id, nomeFantasia: startup.nomeFantasia }))),
+    filtrarPerfis('investidor', reunioes.map(({ investidor }) => ({ id: investidor.id, nome: investidor.nome }))),
+  ]);
+  return reunioes.map((reuniao, indice) => ({
     id: reuniao.id,
     startupId: reuniao.startup.id,
-    startupNome: reuniao.startup.nomeFantasia,
+    startupNome: startups[indice].nomeFantasia,
     investidorId: reuniao.investidor.id,
-    investidorNome: reuniao.investidor.nome,
+    investidorNome: investidores[indice].nome,
     dataHoraAgendada: reuniao.dataHoraAgendada,
     status: reuniao.status,
     linkReuniao: reuniao.linkReuniao ?? null,
     notas: reuniao.notas ?? null,
     criadoEm: reuniao.criadoEm,
-  };
+  }));
 }
 
 // Só é permitido sair de "agendada"; os demais estados são finais.
@@ -106,7 +111,8 @@ export class ReuniaoService {
       notas as string | undefined,
     );
     const completa = await this.reuniaoRepository.buscarPorId(reuniao.id);
-    return paraResumo(completa!);
+    const [resumo] = await paraResumos([completa!]);
+    return resumo;
   }
 
   async listarMinhas(usuarioId: string): Promise<ReuniaoResumo[]> {
@@ -118,12 +124,12 @@ export class ReuniaoService {
     if (usuario.tipoPerfil === TipoPerfil.STARTUP) {
       const startup = await this.startupRepository.findByUsuarioId(usuarioId);
       if (!startup) return [];
-      return (await this.reuniaoRepository.listarPorStartup(startup.id)).map(paraResumo);
+      return paraResumos(await this.reuniaoRepository.listarPorStartup(startup.id));
     }
     if (usuario.tipoPerfil === TipoPerfil.INVESTIDOR) {
       const investidor = await this.investidorRepository.findByUsuarioId(usuarioId);
       if (!investidor) return [];
-      return (await this.reuniaoRepository.listarPorInvestidor(investidor.id)).map(paraResumo);
+      return paraResumos(await this.reuniaoRepository.listarPorInvestidor(investidor.id));
     }
     throw new AppError('Este perfil não participa de reuniões.', 403);
   }
@@ -166,6 +172,7 @@ export class ReuniaoService {
     }
 
     await this.reuniaoRepository.atualizarStatus(reuniaoId, novoStatus as StatusReuniao);
-    return paraResumo((await this.reuniaoRepository.buscarPorId(reuniaoId))!);
+    const [resumo] = await paraResumos([(await this.reuniaoRepository.buscarPorId(reuniaoId))!]);
+    return resumo;
   }
 }
