@@ -86,6 +86,7 @@ test('rotas de denúncia aplicam autenticação, acesso, cota e projeção priva
     });
   });
   t.mock.method(db, 'query', async (sql, params) => {
+    if (sql.includes('session_version')) return [{ tipo_perfil: 'startup', session_version: 0, ativo: true }];
     if (sql.includes('FROM sancoes')) return [];
     if (sql.includes('SELECT ativo')) return [{ ativo: true }];
     assert.match(sql, /WHERE denunciante_usuario_id=\$1/);
