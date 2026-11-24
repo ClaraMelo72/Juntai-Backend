@@ -63,6 +63,22 @@ test('supervised: perfil minimizado, filtros operacionais e contexto assinado',a
  const a=await service.confirmExposure(s.investor.usuario.id,context);const b=await service.confirmExposure(s.investor.usuario.id,context);
  assert.deepEqual(a,b);assert.equal(a.snapshot.investidor.estado,'PE');assert.equal(a.snapshot.startup.estado,'PE');assert.equal(s.calls.filter(sql=>sql.startsWith('INSERT')).length,1);
 });
+test('captura experimental segue no contexto e é persistida na confirmação',async(t)=>{
+ strategy(t,'supervised'); const previous=process.env.MATCHMAKING_BEHAVIOR_CAPTURE;
+ process.env.MATCHMAKING_BEHAVIOR_CAPTURE='true'; t.after(()=>{if(previous===undefined)delete process.env.MATCHMAKING_BEHAVIOR_CAPTURE;else process.env.MATCHMAKING_BEHAVIOR_CAPTURE=previous;});
+ const s=store(), query=s.db.manager.query; let persisted;
+ s.db.manager.query=async(sql,values)=>{
+  if(sql.startsWith('WITH clock'))return [{id:s.startup.id,decision:new Date('2026-01-01T00:00:00Z'),complete_since:null,complete:false}];
+  if(sql.startsWith('INSERT')) persisted=JSON.parse(values[7]);
+  return query(sql,values);
+ };
+ const service=new MatchmakingService(s.db,{supervised:async p=>supervisedResponse(p)});
+ const result=await service.recommend(s.investor.usuario.id,24);
+ const token=result.recomendacoes[0].contextoExposicao, context=readContext(token);
+ assert.equal(context.behavior.historico_completo_90d,false); assert.equal(context.behavior.aberturas,null);
+ await service.confirmExposure(s.investor.usuario.id,token);
+ assert.deepEqual(persisted,context.behavior);
+});
 test('paginação supervisionada não apresenta probabilidade como compatibility',async(t)=>{
  strategy(t,'supervised');const s=store();s.candidates.push({...s.startup,id:'33333333-3333-4333-8333-333333333333'});
  const r=await new MatchmakingService(s.db,{supervised:async p=>supervisedResponse(p)}).discovery(s.investor.usuario.id,{sort:'compatibility',page:'1',size:'1'});
