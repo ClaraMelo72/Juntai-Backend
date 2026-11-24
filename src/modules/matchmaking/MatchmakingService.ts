@@ -8,6 +8,7 @@ import { EntityManager } from 'typeorm';
 import { createHash } from 'crypto';
 import { MatchmakingClient } from './MatchmakingClient';
 import { Context, issueContext, readContext } from './ExposureContext';
+import { BehaviorSnapshot, captureBehavior } from './BehaviorSnapshot';
 import { investorFeatures, startupFeatures, project, rulesProfile, Profile } from './contracts';
 import { SupervisedContractError, supervisedInvestorFeatures, supervisedStartupFeatures, supervisedProfile } from './supervisedContracts';
 import { buscaPerfilStartup, filtrarPerfis } from '@modules/moderacao/services/OcultacaoPerfil';
@@ -27,8 +28,8 @@ export class MatchmakingService {
     if (!investor || !investor.usuario.ativo || investor.usuario.tipoPerfil !== 'investidor' || investor.statusModeracao !== 'aprovado') throw new AppError('Somente investidores aprovados podem acessar recomendações.', 403);
     return investor;
   }
-  private context(i: Investidor, s: Startup, origin: Context['origin'], position: number | null, version: string | null) {
-    return issueContext({ investorId: i.id, startupId: s.id, investorRevision: profileRevision(i, true, origin === 'supervised'), startupRevision: profileRevision(s, false, origin === 'supervised'), origin, position, version });
+  private context(i: Investidor, s: Startup, origin: Context['origin'], position: number | null, version: string | null, behavior?: BehaviorSnapshot) {
+    return issueContext({ investorId: i.id, startupId: s.id, investorRevision: profileRevision(i, true, origin === 'supervised'), startupRevision: profileRevision(s, false, origin === 'supervised'), origin, position, version, ...(behavior ? { behavior } : {}) });
   }
   async recommend(userId: string, limit: number) {
     const investor = await this.actor(userId);
@@ -53,6 +54,8 @@ export class MatchmakingService {
   }
   private async rankSupervised(investor: Investidor, startups: Startup[], limit: number) {
     const candidates = startups.filter(s => s.statusModeracao === 'aprovado' && s.usuario?.ativo === true && s.usuario.id !== s.id && (!s.usuario.tipoPerfil || s.usuario.tipoPerfil === 'startup'));
+    const behavior = process.env.MATCHMAKING_BEHAVIOR_CAPTURE === 'true' && candidates.length
+      ? await captureBehavior(this.db.manager, investor.id, candidates.map(s => s.id)) : new Map<string, BehaviorSnapshot>();
     const recommendations: Profile[] = [];
     let identity: Profile | null = null;
     const notices = new Set<string>();
@@ -69,7 +72,7 @@ export class MatchmakingService {
     return { investidorId: investor.id, versaoAlgoritmo: identity?.versaoModelo ?? null, ...identity,
       origemRecomendacao: 'supervised', experimental: true, avisos: [...notices],
       recomendacoes: recommendations.slice(0,limit).map((r,index): Profile => ({ ...r, posicao: index+1, posicaoRanking: index+1,
-        origemRecomendacao: 'supervised', contextoExposicao: this.context(investor,byId.get(r.startupId)!,'supervised',index+1,identity!.versaoModelo) })) };
+        origemRecomendacao: 'supervised', contextoExposicao: this.context(investor,byId.get(r.startupId)!,'supervised',index+1,identity!.versaoModelo,behavior.get(r.startupId)) })) };
   }
   private async rankRules(investor: Investidor, startups: Startup[], limit: number) {
     // Fetch each eligible candidate before applying the behavioral adjustment.
@@ -186,7 +189,9 @@ export class MatchmakingService {
       if (supervised && startup.usuario.tipoPerfil !== 'startup') throw new AppError('Startup indisponível.', 404);
       if (profileRevision(investor, true, supervised) !== context.investorRevision || profileRevision(startup, false, supervised) !== context.startupRevision) throw new AppError('Perfis alterados. Atualize a descoberta.', 409);
       const snapshot = { investidor: project(investor, supervised ? supervisedInvestorFeatures : investorFeatures), startup: project(startup, supervised ? supervisedStartupFeatures : startupFeatures) };
-      const [saved] = await manager.query(`INSERT INTO exposicoes_startups (id,investidor_id,startup_id,origem_recomendacao,posicao_ranking,versao_recomendador,snapshot_perfis)
+      const [saved] = context.behavior ? await manager.query(`INSERT INTO exposicoes_startups (id,investidor_id,startup_id,origem_recomendacao,posicao_ranking,versao_recomendador,snapshot_perfis,snapshot_comportamental)
+        VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8::jsonb) ON CONFLICT (id) DO NOTHING RETURNING id,ocorrido_em`,
+        [context.exposureId, investor.id, startup.id, context.origin, context.position, context.version, JSON.stringify(snapshot), JSON.stringify(context.behavior)]) : await manager.query(`INSERT INTO exposicoes_startups (id,investidor_id,startup_id,origem_recomendacao,posicao_ranking,versao_recomendador,snapshot_perfis)
         VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb) ON CONFLICT (id) DO NOTHING RETURNING id,ocorrido_em`,
         [context.exposureId, investor.id, startup.id, context.origin, context.position, context.version, JSON.stringify(snapshot)]);
       if (saved) return saved;
