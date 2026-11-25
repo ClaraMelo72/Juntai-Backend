@@ -1,133 +1,109 @@
-# Juntai Backend
+# Juntaí! Backend
 
-**Juntaí!**, uma solução de matchmaking desenvolvida para conectar startups, investidores anjo e mentores do ecossistema de inovação do Nordeste.
+**Juntaí!** é uma plataforma acadêmica de matchmaking para conectar startups, investidores anjo e mentores do ecossistema de inovação do Nordeste. O projeto integra o Projeto Integrador do 5º período de Análise e Desenvolvimento de Sistemas da Faculdade Senac Pernambuco.
 
-O projeto faz parte do Projeto Integrador do 5º período de Análise e Desenvolvimento de Sistemas (ADS), com foco no ecossistema de startups e economia criativa, tendo como contexto o Porto Digital, no Bairro do Recife.
+Este repositório contém a API responsável por contas, perfis, autenticação, autorização, persistência, interações e integração com o serviço de recomendações. A interface e o motor Python são aplicações separadas.
+
+**Demonstração beta na Azure:** [acessar a plataforma](https://delightful-beach-0c45f1a10.4.azurestaticapps.net/). Os perfis de demonstração são fictícios.
 
 ---
 
 ## 📌 Sobre o projeto
 
-O Juntai é uma plataforma SaaS voltada à conexão entre startups em estágio inicial e investidores anjo e mentores.
+O Juntaí! busca facilitar a apresentação de startups, a descoberta de oportunidades e a aproximação com investidores e mentores. A API recebe as ações da interface, valida permissões, consulta e atualiza dados no PostgreSQL e solicita recomendações ao motor quando necessário.
 
-A plataforma busca facilitar a descoberta de oportunidades, a apresentação de startups, o matchmaking entre os participantes e a comunicação após uma conexão.
+O backend não decide se uma startup deve receber investimento. As sugestões apoiam a triagem; a análise e a decisão permanecem com os usuários.
 
-O backend é responsável por disponibilizar a API, implementar as regras de negócio, realizar a persistência dos dados, autenticar usuários e fornecer os serviços necessários para o funcionamento da plataforma.
+### Repositórios
+
+- [Frontend utilizado no beta](https://github.com/renatodelgado/Juntai-Frontend)
+- [Backend utilizado no beta](https://github.com/renatodelgado/Juntai-Backend)
+- [Motor de matchmaking utilizado no beta](https://github.com/renatodelgado/Juntai-matchmaking-IA)
+- Repositórios de origem: [backend de Clara Melo](https://github.com/ClaraMelo72/Juntai-Backend) e [motor de Vinícius](https://github.com/vicent777/Juntai-matchmaking-IA). As versões podem diferir das cópias utilizadas no beta.
 
 ---
 
 ## 🎯 Objetivo
 
-Desenvolver uma API escalável e segura capaz de:
+Disponibilizar uma API capaz de:
 
-- Gerenciar usuários e seus perfis;
-- Cadastrar e gerenciar startups;
-- Cadastrar investidores anjo e mentores;
-- Realizar matchmaking entre startups e investidores/mentores;
-- Gerenciar interações entre os usuários;
-- Disponibilizar recursos de autenticação e autorização;
-- Armazenar e gerenciar imagens e arquivos de mídia;
-- Registrar informações necessárias para métricas e governança;
-- Atender aos requisitos de segurança e conformidade com a LGPD.
+- Gerenciar contas, startups e perfis de investidores e mentores;
+- Autenticar usuários e restringir operações por perfil e recurso;
+- Consultar recomendações e manter o fluxo de descoberta e interesse;
+- Organizar mensagens, reuniões e avaliações;
+- Apoiar moderação, administração e registros de auditoria;
+- Integrar banco, motor de recomendação e serviços de mídia.
 
 ---
 
 ## 👥 Atores
 
-### Startup / Empreendedor
+### Startup / empreendedor
 
-Responsável por cadastrar sua startup, apresentar seu modelo de negócio, informar necessidades e buscar investidores ou mentores compatíveis.
+Cadastra informações e materiais do negócio, apresenta necessidades e acompanha interessados, conversas e reuniões.
 
-### Investidor Anjo / Mentor
+### Investidor anjo / mentor
 
-Responsável por cadastrar seu perfil de interesse, avaliar startups compatíveis e interagir com oportunidades disponíveis na plataforma.
+Informa experiência e interesses, descobre startups e pode registrar interesse e iniciar conversas, conforme as permissões da conta.
 
 ### Administrador
 
-Responsável pela administração da plataforma, incluindo moderação de cadastros e conteúdos, acompanhamento de métricas e ações administrativas.
+Acompanha e modera perfis e denúncias e acessa recursos administrativos autorizados. O cadastro público não cria contas administrativas.
 
 ---
 
 ## 🚀 Funcionalidades
 
-O backend contempla o desenvolvimento das seguintes funcionalidades:
+- Cadastro, autenticação, recuperação de senha e gestão de perfis;
+- Descoberta de startups, filtros, recomendações e registro de interesse;
+- Conversas, mensagens e agendamento e acompanhamento de reuniões;
+- Avaliações e feedback após interações;
+- Moderação de perfis e denúncias, ações administrativas e auditoria;
+- Uploads de imagens e apresentações quando o serviço de mídia está configurado;
+- Integração com o motor de regras e caminho supervisionado experimental.
 
-- Cadastro de usuários;
-- Autenticação e autorização;
-- Gerenciamento de perfis;
-- Cadastro e gerenciamento de startups;
-- Cadastro de investidores e mentores;
-- Definição de interesses e critérios de compatibilidade;
-- Sistema de matchmaking;
-- Visualização de perfis compatíveis;
-- Comunicação entre usuários;
-- Agendamento de reuniões;
-- Apresentação de pitch e modelo de negócio;
-- Moderação administrativa;
-- Geração de métricas da plataforma;
-- Feedback e avaliação após interações;
-- Controle de consentimento e informações relacionadas à LGPD;
-- Registro de ações administrativas para auditoria.
+Algumas operações exigem perfil ativo e aprovado. Pagamentos, operação comercial e exclusão integral da conta não estão concluídos. A presença de entidades relacionadas a consentimento não demonstra que os aceites do cadastro sejam gravados no servidor.
 
 ---
 
 ## 🏗️ Arquitetura
 
-O backend utiliza uma arquitetura em camadas (Layered Architecture), separando as responsabilidades da aplicação.
-
-A comunicação segue, de forma geral, o fluxo:
-
-```text
-Cliente
-   ↓
-Routes
-   ↓
-Middlewares
-   ↓
-Controllers
-   ↓
-Services
-   ↓
-Repositories
-   ↓
-Entities / TypeORM
-   ↓
-PostgreSQL
+```mermaid
+flowchart LR
+    U["Pessoa usuária"] --> F["Frontend React e TypeScript"]
+    F -->|"HTTPS / API"| B["Backend Node.js e Express"]
+    B -->|"TypeORM / SQL"| DB[("PostgreSQL")]
+    B -->|"HTTP / JSON e chave de serviço"| M["Motor Python e FastAPI"]
+    M -->|"ranking e justificativas"| B
+    F -->|"localidades"| IBGE["API do IBGE"]
+    F -->|"fontes"| GF["Google Fonts"]
+    B -->|"arquivos"| C["Cloudinary"]
+    subgraph Azure["Ambiente beta Azure"]
+      F
+      B
+      DB
+      M
+    end
 ```
 
-### Camadas
+O frontend chama a API; o backend autentica, consulta dados necessários e envia uma projeção ao serviço FastAPI. A resposta é validada e entregue à interface. O motor não acessa o PostgreSQL diretamente. O diagrama também está em [`docs/arquitetura.md`](docs/arquitetura.md).
 
-#### Routes
+### Camadas da API
 
-Define os endpoints da API e direciona as requisições para os respectivos controllers.
+```text
+Cliente → Rotas → Middlewares → Controllers → Services → Repositories → PostgreSQL
+                                                  ↓
+                                      Cliente HTTP → FastAPI
+```
 
-#### Middlewares
+- **Rotas:** recebem as chamadas e associam middlewares e controladores.
+- **Middlewares:** tratam autenticação e autorização compartilhadas.
+- **Controllers:** interpretam requisições e encaminham operações.
+- **Services:** concentram regras e coordenação entre componentes.
+- **Repositories e entidades:** acessam e representam dados com TypeORM.
+- **Migrations:** descrevem alterações no esquema; não são aplicadas automaticamente na inicialização.
 
-Responsáveis por comportamentos intermediários da aplicação, como autenticação, autorização, validações e tratamento de requisições.
-
-#### Controllers
-
-Recebem as requisições HTTP, processam os parâmetros necessários e encaminham as operações para os services.
-
-#### Services
-
-Concentram as regras de negócio da aplicação.
-
-#### Repositories
-
-Responsáveis pelo acesso e manipulação dos dados persistidos no banco de dados.
-
-#### Entities
-
-Representam as entidades do domínio e o mapeamento das estruturas utilizadas pelo TypeORM.
-
-#### Config
-
-Centraliza configurações da aplicação, banco de dados e variáveis de ambiente.
-
-#### Migrations
-
-Responsáveis pelo versionamento e evolução da estrutura do banco de dados.
+Dados de contas, mensagens e reuniões são transacionais. Exposições e interações de descoberta são comportamentais. Recomendações são solicitadas sob demanda; a conclusão de reuniões é verificada periodicamente.
 
 ---
 
@@ -135,190 +111,66 @@ Responsáveis pelo versionamento e evolução da estrutura do banco de dados.
 
 ```text
 Juntai-Backend/
-│
 ├── src/
-│   ├── @types/
-│   ├── config/
-│   ├── controllers/
-│   ├── entities/
-│   ├── middlewares/
-│   ├── migrations/
-│   ├── repositories/
-│   ├── routes/
-│   ├── services/
-│   ├── App.ts
-│   └── Server.ts
-│
-├── dist/
-├── .env
-├── .gitignore
+│   ├── modules/             # Domínios: auth, startups, investidores,
+│   │                        # matchmaking, mensagens, reuniões, moderação etc.
+│   ├── shared/              # Banco, middlewares, erros, enums e configuração
+│   │   └── database/migrations/
+│   ├── App.ts               # Aplicação Express e rotas
+│   └── Server.ts            # Conexão e inicialização
+├── tests/                   # Testes automatizados e fixtures
+├── docs/                    # Detalhes de integração e migrations
+├── scripts/                 # Rotinas auxiliares
+├── .env.example             # Exemplo de configuração sem segredos reais
+├── docker-compose.yml       # PostgreSQL e API para desenvolvimento
+├── Dockerfile
 ├── package.json
-├── package-lock.json
-└── tsconfig.json
+└── package-lock.json
 ```
-
-### Principais arquivos e diretórios
-
-| Diretório/Arquivo | Responsabilidade |
-|---|---|
-| `src/@types` | Tipagens personalizadas do projeto |
-| `src/config` | Configurações da aplicação e banco |
-| `src/controllers` | Controle das requisições HTTP |
-| `src/entities` | Entidades e modelos do TypeORM |
-| `src/middlewares` | Autenticação, autorização e outras funções intermediárias |
-| `src/migrations` | Versionamento do banco de dados |
-| `src/repositories` | Persistência e acesso aos dados |
-| `src/routes` | Definição das rotas da API |
-| `src/services` | Regras de negócio |
-| `src/App.ts` | Configuração da aplicação Express |
-| `src/Server.ts` | Inicialização do servidor |
 
 ---
 
 ## 🛠️ Stack
 
-### Linguagem
+| Tecnologia | Responsabilidade |
+| --- | --- |
+| Node.js e TypeScript | Runtime e implementação da API |
+| Express | Rotas e processamento HTTP |
+| TypeORM e PostgreSQL | Entidades, persistência e migrations |
+| JWT e bcrypt | Autenticação e hash de senhas |
+| Cloudinary | Armazenamento de mídia quando configurado |
+| Python e FastAPI | Serviço externo de matchmaking |
+| Docker | Empacotamento e execução local do banco e serviços |
 
-- TypeScript
-
-### Runtime
-
-- Node.js
-
-### Framework
-
-- Express
-
-### ORM
-
-- TypeORM
-
-### Banco de dados
-
-- PostgreSQL
-
-### Autenticação
-
-- JSON Web Token (JWT)
-
-### Armazenamento de mídia
-
-- Cloudinary
-
-### Segurança
-
-- bcrypt para hash de senhas
-- JWT para autenticação e autorização
-- Variáveis de ambiente para configurações sensíveis
-
-### Ferramentas de desenvolvimento
-
-- ts-node
-- ts-node-dev
-- tsconfig-paths
-- ESLint
-- Prettier
+As versões estão em `package.json` e `package-lock.json`; o workflow do backend utiliza Node.js 24.
 
 ---
 
 ## 🔐 Autenticação e autorização
 
-A API utiliza **JWT (JSON Web Token)** para autenticação dos usuários.
-
-Após o login, o usuário autenticado recebe um token que deve ser enviado nas requisições protegidas.
-
-Os acessos da plataforma são organizados de acordo com o perfil do usuário, incluindo:
-
-- Startup;
-- Investidor/Mentor;
-- Administrador.
-
-O backend utiliza middlewares para validar a autenticação e restringir recursos de acordo com as permissões do usuário.
-
-### Endpoints
-
-| Método | Rota | Acesso | Descrição |
-|---|---|---|---|
-| `POST` | `/startups` | Público | Cadastro de startup (cria o usuário com perfil `startup`) |
-| `POST` | `/investidores` | Público | Cadastro de investidor/mentor (perfil `investidor`) |
-| `POST` | `/auth/login` | Público | Recebe `{ "email", "senha" }` e devolve `{ token, usuario }` |
-| `GET` | `/auth/me` | Autenticado | Devolve os dados do usuário do token |
-
-Nas rotas protegidas, envie o token no cabeçalho:
+O login devolve um token JWT. As rotas protegidas recebem:
 
 ```text
 Authorization: Bearer <token>
 ```
 
-Respostas de erro: `401` (token ausente, inválido ou expirado, ou credenciais erradas), `403` (perfil sem permissão ou usuário inativo).
+Os middlewares `ensureAuthenticated` e `ensureRole`, em `src/shared/middlewares`, verificam a sessão e o perfil. Serviços também verificam titularidade e condições específicas. Um `401` indica, por exemplo, sessão ausente ou inválida; um `403` pode indicar falta de permissão. O cadastro público cria perfis de startup e investidor/mentor, não de administrador.
 
-### Protegendo novas rotas
+### Endpoints principais
 
-Os middlewares ficam em `src/shared/middlewares`. Use `ensureAuthenticated` para exigir login e `ensureRole` para restringir por perfil:
+| Método | Rota | Finalidade |
+| --- | --- | --- |
+| `GET` | `/health` | Verifica a resposta do processo |
+| `POST` | `/startups` | Cadastra startup e conta |
+| `POST` | `/investidores` | Cadastra investidor/mentor e conta |
+| `POST` | `/auth/login` | Autentica com e-mail e senha |
+| `GET` | `/auth/me` | Retorna informações da conta autenticada |
+| `POST` | `/auth/forgot-password` | Solicita recuperação de senha |
+| `POST` | `/auth/reset-password` | Define nova senha com token válido |
+| `POST` | `/startups/:id/interesse` | Registra interesse de investidor autorizado |
+| `GET` | `/startups/interessados` | Lista interessados para a startup autorizada |
 
-```ts
-import { ensureAuthenticated } from '@shared/middlewares/ensureAuthenticated';
-import { ensureRole } from '@shared/middlewares/ensureRole';
-import { TipoPerfil } from '@shared/enums';
-
-// Qualquer usuário logado
-router.get('/perfil', ensureAuthenticated, controller.perfil);
-
-// Somente administradores
-router.get('/metricas', ensureAuthenticated, ensureRole(TipoPerfil.ADMIN), controller.metricas);
-
-// Mais de um perfil
-router.get('/matches', ensureAuthenticated, ensureRole(TipoPerfil.STARTUP, TipoPerfil.INVESTIDOR), controller.matches);
-```
-
-Dentro do controller, o usuário logado está em `req.user` (`{ id, tipoPerfil }`).
-
-### Criando o primeiro administrador
-
-O cadastro público só cria startups e investidores. O administrador é criado por script, com o banco no ar:
-
-```bash
-ADMIN_EMAIL=admin@juntai.com ADMIN_PASSWORD=uma-senha-forte npm run seed:admin
-```
-
-No PowerShell:
-
-```powershell
-$env:ADMIN_EMAIL="admin@juntai.com"; $env:ADMIN_PASSWORD="uma-senha-forte"; npm run seed:admin
-```
-
----
-
-## ☁️ Armazenamento de mídia
-
-O **Cloudinary** será utilizado para armazenamento e gerenciamento de imagens e outros recursos de mídia utilizados pela plataforma.
-
-Entre os possíveis recursos estão:
-
-- Logos de startups;
-- Imagens de perfil;
-- Imagens relacionadas às startups;
-- Materiais utilizados na apresentação dos projetos.
-
-As credenciais do Cloudinary não devem ser armazenadas diretamente no código-fonte.
-
----
-
-## 🗄️ Banco de dados
-
-O projeto utiliza **PostgreSQL** como sistema de gerenciamento de banco de dados.
-
-A comunicação entre a aplicação e o banco é realizada utilizando:
-
-```text
-TypeScript
-    ↓
-TypeORM
-    ↓
-PostgreSQL
-```
-
-As alterações estruturais do banco devem ser controladas por meio de migrations.
+Os módulos de startups, investidores, mensagens, reuniões, avaliações, uploads, denúncias e administração possuem outras rotas com permissões próprias em `src/modules`.
 
 ---
 
@@ -326,259 +178,112 @@ As alterações estruturais do banco devem ser controladas por meio de migration
 
 ### Pré-requisitos
 
-Antes de executar o projeto, é necessário possuir:
+- Git e Node.js 24 com npm;
+- PostgreSQL 16 ou Docker com Compose;
+- Python e serviço de matchmaking para recomendações;
+- Cloudinary e Azure Communication Services somente para os respectivos fluxos de mídia e recuperação por e-mail.
 
-- Node.js;
-- npm;
-- PostgreSQL;
-- Git.
-
-### Clonar o repositório
+### Clonar e instalar
 
 ```bash
-git clone https://github.com/ClaraMelo72/Juntai-Backend.git
-```
-
-Entrar na pasta:
-
-```bash
+git clone https://github.com/renatodelgado/Juntai-Backend.git
 cd Juntai-Backend
+npm ci
 ```
 
-### Instalar dependências
+### Variáveis de ambiente
+
+Copie `.env.example` para `.env`: `cp .env.example .env` no macOS/Linux ou `Copy-Item .env.example .env` no PowerShell. Gere um segredo JWT próprio com `node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"` e coloque o resultado no arquivo local. Não versione `.env` nem compartilhe segredos.
+
+| Variável | Finalidade |
+| --- | --- |
+| `NODE_ENV`, `PORT` | Ambiente e porta da API; o exemplo usa 3333 |
+| `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` | Conexão com PostgreSQL; o Compose expõe a porta 5433 no computador |
+| `JWT_SECRET`, `JWT_EXPIRES_IN` | Assinatura e validade da sessão |
+| `MATCHMAKING_API_URL`, `MATCHMAKING_TIMEOUT_MS` | Endereço e tempo limite do motor |
+| `MATCHMAKING_API_KEY` | Chave compartilhada com o motor quando a autenticação estiver configurada |
+| `MATCHMAKING_STRATEGY` | `rules` por padrão; `supervised` é experimental |
+| `ACS_EMAIL_ENDPOINT`, `ACS_EMAIL_ACCESS_KEY`, `ACS_EMAIL_SENDER` | Serviço de envio de e-mail para recuperação |
+| `PASSWORD_RESET_FRONTEND_URL`, `RECOVERY_TRUST_AZURE_INGRESS` | Endereço de redefinição e configuração do proxy confiável |
+
+Os valores do banco no exemplo e no Compose destinam-se ao desenvolvimento local. Em ambientes compartilhados, use credenciais próprias e gerenciamento de segredos. `DB_SSL=true` ativa TLS na conexão com o banco; `CORS_ORIGINS` pode limitar origens permitidas.
+
+### Banco de dados
+
+Para iniciar somente o PostgreSQL do Compose:
 
 ```bash
-npm install
+docker compose up -d postgres
 ```
 
-### Configurar variáveis de ambiente
+O banco ficará acessível na porta 5433 do computador. Para interromper os serviços do Compose, use `docker compose down`; os dados do volume permanecem preservados.
 
-Copiar o arquivo de exemplo para `.env` na raiz do projeto:
+**Atenção ao banco vazio:** as migrations disponíveis são incrementais e pressupõem tabelas anteriores. Não há uma migration inicial completa no repositório, `synchronize` está desativado e o servidor não aplica migrations automaticamente. Um PostgreSQL recém-criado não é suficiente para os fluxos persistidos. Prepare um esquema de teste compatível e revise as migrations necessárias em ambiente isolado; não aplique migrations indiscriminadamente em bancos existentes nem restaure dados pessoais para testes.
 
-```bash
-cp .env.example .env
-```
+### Iniciar a API
 
-No PowerShell, use `Copy-Item .env.example .env`.
-
-Os valores padrão já funcionam com o banco do `docker-compose.yml`. O arquivo `.env` não é versionado.
-
-| Variável | Descrição | Valor padrão |
-|---|---|---|
-| `NODE_ENV` | Ambiente. Fora de `production`, o TypeORM sincroniza o schema e ativa logs | `development` |
-| `PORT` | Porta da API | `3333` |
-| `DB_HOST` | Host do PostgreSQL | `localhost` |
-| `DB_PORT` | Porta do PostgreSQL (o Docker expõe a `5433`) | `5433` |
-| `DB_USER` | Usuário do banco | `admin` |
-| `DB_PASSWORD` | Senha do banco | `admin` |
-| `DB_NAME` | Nome do banco | `juntai_db` |
-| `JWT_SECRET` | Segredo usado para assinar os tokens. **Obrigatório**: a API não sobe sem ele | — |
-| `JWT_EXPIRES_IN` | Validade do token (ex.: `1d`, `12h`) | `1d` |
-
-Cada pessoa deve gerar o próprio `JWT_SECRET`:
-
-```bash
-node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
-```
-
----
-
-## ▶️ Executando em desenvolvimento
-
-Fluxo recomendado: banco no Docker e API rodando localmente.
-
-Subir o PostgreSQL:
-
-```bash
-docker compose up postgres -d
-```
-
-Iniciar o servidor em modo de desenvolvimento:
+Com o banco de teste compatível e `.env` configurados:
 
 ```bash
 npm run dev
 ```
 
-O servidor será executado, por padrão, na porta:
-
-```text
-3333
-```
-
-Para parar o banco:
-
-```bash
-docker compose down
-```
-
-Os dados ficam preservados no volume `postgres_data`. Para apagá-los também, use `docker compose down -v`.
-
-### Alternativa: tudo no Docker
-
-Sobe o banco e a API juntos, com hot-reload:
-
-```bash
-docker compose up
-```
-
----
-
-## 🏗️ Build
-
-Para gerar a versão compilada do projeto:
-
-```bash
-npm run build
-```
-
-Os arquivos compilados serão gerados no diretório:
-
-```text
-dist/
-```
-
----
-
-## ▶️ Executando produção
-
-Após realizar o build:
-
-```bash
-npm start
-```
-
-O comando executará a versão compilada localizada em `dist/`.
+A API usa `http://localhost:3333` por padrão. `GET /health` verifica a resposta do processo, mas não prova que o esquema e todos os fluxos estejam prontos. Para recomendações, inicie o motor e configure `MATCHMAKING_API_URL`, normalmente `http://127.0.0.1:8000`. Se a autenticação entre serviços estiver habilitada, configure a mesma chave no backend e no motor, nunca no frontend.
 
 ---
 
 ## 🧪 Testes e validação
 
-As funcionalidades críticas do sistema deverão ser cobertas por testes e validações antes do lançamento.
+Com as dependências instaladas e `JWT_SECRET` definido:
 
-O processo de validação contempla:
+```bash
+npm test
+npm run build
+```
 
-- Testes funcionais;
-- Testes de integração;
-- Validação das regras de negócio;
-- Testes de autenticação e autorização;
-- Testes de endpoints;
-- Validação com usuários beta;
-- Verificação dos requisitos funcionais e não funcionais.
+Os testes usam fixtures e simulações em várias situações. Alguns testes de PostgreSQL, mídia e integração exigem variáveis e serviços adicionais e podem ser ignorados na suíte padrão. Consulte os próprios testes antes de habilitá-los e use somente ambientes isolados.
+
+### Regras ECA
+
+**Interesse:** evento: investidor confirma interesse; condição: os perfis estão ativos e aprovados; ação: o backend registra o evento se ainda não existir. Implementação: `src/modules/startups/services/StartupInterestService.ts`. O teste de idempotência está em `tests/matchmaking.test.cjs`:
+
+```bash
+node --test tests/matchmaking.test.cjs
+```
+
+**Reunião:** evento: verificação periódica; condição: uma reunião continua agendada após 24 horas de seu horário; ação: o backend altera seu estado para realizada. Implementação: `src/modules/reunioes/services/conclusaoAutomatica.ts` e `src/modules/reunioes/repositories/ReuniaoRepository.ts`. O teste correspondente está em `tests/feedback.test.cjs`.
 
 ---
 
 ## 🔒 Segurança e LGPD
 
-O backend considera requisitos de segurança e privacidade previstos para a plataforma.
+As medidas implementadas incluem hash de senha com bcrypt, autenticação JWT, controles de acesso e variáveis de ambiente para segredos. O beta usa TLS na conexão com o banco e autenticação entre API e motor.
 
-Entre as medidas previstas estão:
-
-- Autenticação baseada em JWT;
-- Senhas armazenadas utilizando hash;
-- Controle de acesso por perfil;
-- Uso de variáveis de ambiente para dados sensíveis;
-- Comunicação segura em produção;
-- Controle de consentimento;
-- Tratamento adequado de dados pessoais;
-- Possibilidade de exclusão de dados conforme as regras aplicáveis;
-- Registro de ações administrativas para auditoria.
+O cadastro pode reunir dados pessoais, informações profissionais e conteúdo inserido em perfis e mensagens. O canal para titulares, o registro verificável dos aceites, a exclusão integral, retenção e restauração ainda exigem definição ou implementação. A política da interface é provisória; não se deve declarar conformidade integral apenas pela existência de telas ou entidades.
 
 ---
 
-## 📊 Métricas
+## ☁️ Deploy, status e versão
 
-A plataforma deverá disponibilizar informações para acompanhamento do ecossistema, incluindo métricas como:
+O beta usa Azure Container Apps para a API e o motor, PostgreSQL na Azure e Azure Static Web Apps para a interface. O workflow `.github/workflows/azure-beta.yml` instala dependências, executa testes e build e publica uma imagem identificada pelo commit. Serviços externos e escala zero podem afetar disponibilidade e tempo da primeira resposta.
 
-- Número de startups cadastradas;
-- Número de investidores e mentores cadastrados;
-- Número de matches realizados;
-- Conversas iniciadas;
-- Reuniões agendadas;
-- Interações realizadas;
-- Avaliações após interações.
+A tag `v1.0-high-tech` identifica a versão preparada para a entrega; commits posteriores não alteram essa tag. O projeto permanece em desenvolvimento e não há licença de distribuição explícita neste repositório.
 
 ---
 
-## ☁️ Deploy
+## 🎓 Projeto Integrador e equipe
 
-O backend será preparado para implantação na **Microsoft Azure**.
+- **Curso:** Análise e Desenvolvimento de Sistemas — 5º período
+- **Instituição:** Faculdade Senac Pernambuco
+- **Projeto:** Startups e Economia Criativa — Juntaí!
 
-A infraestrutura de produção deverá contemplar:
+**Integrantes:** João Victor Rodrigues Basante, João Vitor Malveira da Silva, Maria Clara de Melo, Renato Trancoso Branco Delgado, Thayana Anália dos Santos Lira e Vinícius Henrique Silva Nascimento.
 
-```text
-Aplicação Backend
-       ↓
-Microsoft Azure
-       ↓
-PostgreSQL
-       ↓
-Serviços externos
-   ├── Cloudinary
-   └── Serviços de autenticação/comunicação
-```
+## 🤖 Uso de inteligência artificial
 
-As configurações específicas de produção serão definidas durante a etapa de implantação e Go-to-Market do projeto.
+- **Identidade visual:** ChatGPT apoiou o brainstorming de tipografia e cores; o logo final foi feito por uma designer profissional.
+- **Prototipagem e frontend:** ChatGPT e Codex auxiliaram na jornada, posteriormente modificada pela equipe. Codex e UXPilot apoiaram a prototipagem com base nas definições da equipe; o Codex também auxiliou a programação supervisionada de acordo com o cronograma.
+- **Backend e matchmaking:** Claude foi o mais utilizado como auxílio na programação, além do ChatGPT. Gemini auxiliou nas verificações de segurança.
+- **Documentação:** Codex e Claude auxiliaram na elaboração e revisão.
 
----
-
-## 📋 Requisitos do Sistema
-
-O backend atende aos requisitos definidos para o Projeto Integrador:
-
-### Requisitos funcionais
-
-- **RF01:** Cadastro de startups;
-- **RF02:** Cadastro de investidores e mentores;
-- **RF03:** Matchmaking por critérios de afinidade;
-- **RF04:** Visualização de perfis compatíveis;
-- **RF05:** Comunicação e agendamento;
-- **RF06:** Apresentação de pitch e modelo de negócio;
-- **RF07:** Autenticação e controle de acesso;
-- **RF08:** Moderação administrativa;
-- **RF09:** Geração de métricas;
-- **RF10:** Feedback e avaliação;
-- **RF11:** Política de uso e consentimento conforme a LGPD.
-
-### Requisitos não funcionais
-
-- Disponibilidade;
-- Segurança;
-- Conformidade com a LGPD;
-- Usabilidade;
-- Escalabilidade;
-- Governança;
-- Confiabilidade;
-- Portabilidade;
-- Manutenibilidade;
-- Auditabilidade.
-
----
-
-## 🎓 Projeto Integrador
-
-**Curso:** Análise e Desenvolvimento de Sistemas – ADS  
-**Período:** 5º período  
-**Projeto:** Startups e Economia Criativa  
-**Contexto:** Porto Digital – Recife/PE  
-**Produto:** Juntai
-
-O projeto integra conhecimentos das disciplinas:
-
-- Full Stack;
-- Empreendedorismo;
-- Governança em TI;
-- Verificação e Validação.
-
----
-
-## 📌 Status
-
-🚧 **Em desenvolvimento**
-
-O backend encontra-se em fase de desenvolvimento e estruturação das funcionalidades necessárias para o lançamento da plataforma.
-
----
-
-## 📄 Licença
-
-Este projeto foi desenvolvido para fins acadêmicos como parte do Projeto Integrador do curso de Análise e Desenvolvimento de Sistemas.
+As decisões, a compreensão do código e a validação dos resultados são responsabilidade da equipe.
