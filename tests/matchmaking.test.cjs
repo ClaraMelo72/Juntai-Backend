@@ -121,10 +121,26 @@ test('mais de 10.000 candidatas usam lotes e ranking global determinístico', as
     return result;
   } });
   const result = await service.recommend(fixture.request.investidor.usuario.id, 1);
-  assert.deepEqual(sizes, [10000, 1]);
+  assert.deepEqual(sizes, [...Array(10).fill(1000), 1]);
   assert.equal(result.recomendacoes.length, 1);
-  assert.equal(result.recomendacoes[0].startupId, store.candidates[10000].id);
+  assert.equal(result.recomendacoes[0].startupId, store.candidates[1000].id);
   assert.equal(store.calls.length, 0);
+});
+test('histórico de setor altera a ordem sem alterar a compatibilidade original', async () => {
+  const store = fakeStore();
+  store.startup.segmento = 'agtech';
+  store.candidates.push({ ...store.startup, id: '00000000-0000-4000-8000-000000000001', segmento: 'fintech' });
+  store.db.query = async () => [{ segmento: 'agtech', peso: '6' }];
+  const service = new MatchmakingService(store.db, { rules: async () => {
+    const first = clone(fixture.response.recomendacoes[0]);
+    const second = clone(first);
+    first.startupId = store.startup.id; first.scoreRanking = 0.70; first.score = 0.70;
+    second.startupId = store.candidates[1].id; second.scoreRanking = 0.75; second.score = 0.75;
+    return { ...clone(fixture.response), recomendacoes: [second, first] };
+  } });
+  const result = await service.recommend(store.investor.usuario.id, 2);
+  assert.equal(result.recomendacoes[0].startupId, store.startup.id);
+  assert.equal(result.recomendacoes[0].score, 0.70);
 });
 test('confirmação idempotente, snapshot minimizado e sem alterar interesses', async () => {
   const store = fakeStore();
